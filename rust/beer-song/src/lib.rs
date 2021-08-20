@@ -23,15 +23,10 @@ pub fn verse(n: u32) -> String {
 }
 
 pub fn sing(start: u32, end: u32) -> String {
-    let mut result = String::from("");
-    let mut i = start;
-    while i > end {
-        result.push_str(&(verse(i) + "\n"));
-        i -= 1;
-    }
-    if i == end {
-        result.push_str(&verse(i));
-    }
+    assert!(start >= end);
 
-    result
+    let r = (end..start + 1).rev();
+    let verses: Vec<String> = r.map(|x| verse(x)).collect();
+
+    verses.join("\n")
 }

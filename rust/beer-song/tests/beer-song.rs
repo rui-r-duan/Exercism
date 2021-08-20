@@ -34,8 +34,3 @@ fn test_song_3_0() {
 fn test_song_0_0() {
     assert_eq!(beer::sing(0, 0), "No more bottles of beer on the wall, no more bottles of beer.\nGo to the store and buy some more, 99 bottles of beer on the wall.\n");
 }
-
-#[test]
-fn test_song_0_1() {
-    assert_eq!(beer::sing(0, 1), "");
-}
