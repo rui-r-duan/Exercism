@@ -22,14 +22,7 @@ pub fn verse(n: u32) -> String {
 }
 
 pub fn sing(start: u32, end: u32) -> String {
-    let verses: Vec<String>;
-    if start >= end {
-        let r = (end..start + 1).rev();
-        verses = r.map(verse).collect();
-    } else {
-        let r = start..end + 1;
-        verses = r.map(verse).collect();
-    }
+    let r = (end..=start).rev();
 
-    verses.join("\n")
+    r.map(verse).collect::<Vec<String>>().join("\n")
 }
