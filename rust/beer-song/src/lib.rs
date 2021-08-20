@@ -13,9 +13,8 @@ pub fn verse(n: u32) -> String {
              Take one down and pass it around, 1 bottle of beer on the wall.\n",
         ),
         _ => format!(
-            "{} bottles of beer on the wall, {} bottles of beer.\n\
-             Take one down and pass it around, {} bottles of beer on the wall.\n",
-            n,
+            "{0} bottles of beer on the wall, {0} bottles of beer.\n\
+             Take one down and pass it around, {1} bottles of beer on the wall.\n",
             n,
             n - 1
         ),
@@ -23,10 +22,14 @@ pub fn verse(n: u32) -> String {
 }
 
 pub fn sing(start: u32, end: u32) -> String {
-    assert!(start >= end);
-
-    let r = (end..start + 1).rev();
-    let verses: Vec<String> = r.map(|x| verse(x)).collect();
+    let verses: Vec<String>;
+    if start >= end {
+        let r = (end..start + 1).rev();
+        verses = r.map(verse).collect();
+    } else {
+        let r = start..end + 1;
+        verses = r.map(verse).collect();
+    }
 
     verses.join("\n")
 }
