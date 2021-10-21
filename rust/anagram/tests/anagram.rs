@@ -1,4 +1,7 @@
-use anagram::Anagram;
+#![feature(test)]
+extern crate test;
+use test::bench::Bencher;
+
 use std::collections::HashSet;
 
 fn process_anagram_case(word: &str, inputs: &[&str], expected: &[&str]) {
@@ -7,6 +10,10 @@ fn process_anagram_case(word: &str, inputs: &[&str], expected: &[&str]) {
     let expected: HashSet<&str> = expected.iter().cloned().collect();
 
     assert_eq!(result, expected);
+}
+
+fn bench_anagram_case(word: &str, inputs: &[&str], b: &mut Bencher) {
+    b.iter(|| anagram::anagrams_for(word, inputs));
 }
 
 #[test]
@@ -80,6 +87,24 @@ fn test_multiple_anagrams() {
     let outputs = vec!["gallery", "regally", "largely"];
 
     process_anagram_case(word, &inputs, &outputs);
+}
+
+#[bench]
+fn bench_multiple_anagrams(b: &mut Bencher) {
+    let word = "allergy";
+
+    let inputs = [
+        "gallery",
+        "ballerina",
+        "regally",
+        "clergy",
+        "largely",
+        "leading",
+    ];
+
+    let _outputs = vec!["gallery", "regally", "largely"];
+
+    bench_anagram_case(word, &inputs, b);
 }
 
 #[test]
@@ -171,12 +196,4 @@ fn test_different_words_but_same_ascii_sum() {
     let outputs = vec![];
 
     process_anagram_case(word, &inputs, &outputs);
-}
-
-#[test]
-fn test_trait_impl() {
-    let target = String::from("ad");
-    let word = String::from("bc");
-
-    assert_eq!(target[..].is_anagram_of(&word), false)
 }
