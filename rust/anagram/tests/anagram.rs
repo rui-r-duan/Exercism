@@ -95,16 +95,27 @@ fn bench_multiple_anagrams(b: &mut Bencher) {
 
     let inputs = [
         "gallery",
-        "ballerina",
+        &repeat("ballerina", 10000),
         "regally",
-        "clergy",
+        &repeat("clergy", 99999),
         "largely",
-        "leading",
+        &repeat("leading", 29382),
     ];
 
     let _outputs = vec!["gallery", "regally", "largely"];
 
     bench_anagram_case(word, &inputs, b);
+
+    fn repeat(s: &str, times: i32) -> String {
+        let mut result = String::new();
+        let mut n = times;
+        while n > 0 {
+            result += s;
+            n -= 1;
+        }
+
+        result
+    }
 }
 
 #[test]
