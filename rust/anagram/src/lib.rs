@@ -12,7 +12,7 @@ pub fn anagrams_for<'a>(word: &str, possible_anagrams: &[&'a str]) -> HashSet<&'
         *count += 1;
     }
 
-    let is_anagram_of = |possible: &str| {
+    let is_anagram = |possible: &str| {
         if possible.chars().count() != word_chars_count {
             return false;
         }
@@ -40,7 +40,7 @@ pub fn anagrams_for<'a>(word: &str, possible_anagrams: &[&'a str]) -> HashSet<&'
     };
 
     for w in possible_anagrams {
-        if is_anagram_of(*w) {
+        if is_anagram(*w) {
             result.insert(*w);
         }
     }
