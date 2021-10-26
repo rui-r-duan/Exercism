@@ -3,23 +3,22 @@
 
 #[derive(Debug)]
 pub struct Duration {
-    age_years: f64,
+    years: f64,
 }
 
 impl From<u64> for Duration {
     fn from(s: u64) -> Self {
-        Duration {
-            age_years: s as f64 / 31557600 as f64,
+        const SECONDS_EARTH_YEAR: f64 = 31_557_600.0;
+        Self {
+            years: s as f64 / SECONDS_EARTH_YEAR,
         }
     }
 }
 
 pub trait Planet {
+    const EARTH_YEAR_RATIO: f64;
     fn years_during(d: &Duration) -> f64 {
-        unimplemented!(
-            "convert a duration ({:?}) to the number of years on this planet for that duration",
-            d,
-        );
+        d.years / Self::EARTH_YEAR_RATIO
     }
 }
 
@@ -33,63 +32,33 @@ pub struct Uranus;
 pub struct Neptune;
 
 impl Planet for Mercury {
-    fn years_during(d: &Duration) -> f64 {
-        const R: f64 = 0.2408467;
-
-        d.age_years / R
-    }
+    const EARTH_YEAR_RATIO: f64 = 0.2408467;
 }
 
 impl Planet for Venus {
-    fn years_during(d: &Duration) -> f64 {
-        const R: f64 = 0.61519726;
-
-        d.age_years / R
-    }
+    const EARTH_YEAR_RATIO: f64 = 0.61519726;
 }
 
 impl Planet for Earth {
-    fn years_during(d: &Duration) -> f64 {
-        d.age_years
-    }
+    const EARTH_YEAR_RATIO: f64 = 1.0;
 }
 
 impl Planet for Mars {
-    fn years_during(d: &Duration) -> f64 {
-        const R: f64 = 1.8808158;
-
-        d.age_years / R
-    }
+    const EARTH_YEAR_RATIO: f64 = 1.8808158;
 }
 
 impl Planet for Jupiter {
-    fn years_during(d: &Duration) -> f64 {
-        const R: f64 = 11.862615;
-
-        d.age_years / R
-    }
+    const EARTH_YEAR_RATIO: f64 = 11.862615;
 }
 
 impl Planet for Saturn {
-    fn years_during(d: &Duration) -> f64 {
-        const R: f64 = 29.447498;
-
-        d.age_years / R
-    }
+    const EARTH_YEAR_RATIO: f64 = 29.447498;
 }
 
 impl Planet for Uranus {
-    fn years_during(d: &Duration) -> f64 {
-        const R: f64 = 84.016846;
-
-        d.age_years / R
-    }
+    const EARTH_YEAR_RATIO: f64 = 84.016846;
 }
 
 impl Planet for Neptune {
-    fn years_during(d: &Duration) -> f64 {
-        const R: f64 = 164.79132;
-
-        d.age_years / R
-    }
+    const EARTH_YEAR_RATIO: f64 = 164.79132;
 }
