@@ -20,6 +20,7 @@ impl Player {
     }
 
     pub fn cast_spell(&mut self, mana_cost: u32) -> u32 {
+        // method 1
         match self.mana.as_mut() {
             Some(m) => {
                 if *m >= mana_cost {
@@ -40,5 +41,28 @@ impl Player {
                 0
             }
         }
+
+        // method 2
+        // match self.mana {
+        //     Some(m) => {
+        //         if m >= mana_cost {
+        //             self.mana = Some(m - mana_cost);
+
+        //             mana_cost * 2
+        //         } else {
+        //             0
+        //         }
+        //     }
+        //     None => match self.health.checked_sub(mana_cost) {
+        //         Some(x) => {
+        //             self.health = x;
+        //             0
+        //         }
+        //         None => {
+        //             self.health = 0;
+        //             0
+        //         }
+        //     },
+        // }
     }
 }
