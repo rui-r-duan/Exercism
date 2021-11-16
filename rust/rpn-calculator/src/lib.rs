@@ -14,19 +14,23 @@ fn binary_op(stack: &mut Vec<i32>, f: impl Fn(i32, i32) -> i32) -> Option<i32> {
 }
 
 pub fn evaluate(inputs: &[CalculatorInput]) -> Option<i32> {
-    let mut result = inputs.iter().fold(vec![], |mut stack, input| {
-        if let Some(new) = match input {
-            CalculatorInput::Add => binary_op(&mut stack, i32::add),
-            CalculatorInput::Subtract => binary_op(&mut stack, i32::sub),
-            CalculatorInput::Multiply => binary_op(&mut stack, i32::mul),
-            CalculatorInput::Divide => binary_op(&mut stack, i32::div),
-            CalculatorInput::Value(value) => Some(*value),
-        } {
-            stack.push(new);
-        }
-        stack
-    });
-    result
-        .pop()
-        .and_then(|x| if result.is_empty() { Some(x) } else { None })
+    inputs
+        .iter()
+        .try_fold(vec![], |mut stack, input| {
+            match input {
+                CalculatorInput::Add => binary_op(&mut stack, i32::add),
+                CalculatorInput::Subtract => binary_op(&mut stack, i32::sub),
+                CalculatorInput::Multiply => binary_op(&mut stack, i32::mul),
+                CalculatorInput::Divide => binary_op(&mut stack, i32::div),
+                CalculatorInput::Value(value) => Some(*value),
+            }
+            .map(|x| {
+                stack.push(x);
+                stack
+            })
+        })
+        .and_then(|stack| match stack.as_slice() {
+            [x] => Some(*x),
+            _ => None,
+        })
 }
