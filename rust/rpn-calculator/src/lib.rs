@@ -10,14 +10,11 @@ pub enum CalculatorInput {
 }
 
 fn binary_op(stack: &mut Vec<i32>, f: impl Fn(i32, i32) -> i32) -> Option<i32> {
-    stack
-        .pop()
-        .and_then(|y| stack.pop().and_then(|x| Some(f(x, y))))
+    stack.pop().and_then(|y| stack.pop().map(|x| f(x, y)))
 }
 
 pub fn evaluate(inputs: &[CalculatorInput]) -> Option<i32> {
-    let v: Vec<i32> = vec![];
-    let mut result = inputs.iter().fold(v, |mut stack, input| {
+    let mut result = inputs.iter().fold(vec![], |mut stack, input| {
         if let Some(new) = match input {
             CalculatorInput::Add => binary_op(&mut stack, i32::add),
             CalculatorInput::Subtract => binary_op(&mut stack, i32::sub),
