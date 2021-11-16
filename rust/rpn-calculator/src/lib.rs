@@ -6,112 +6,29 @@ pub enum CalculatorInput {
     Divide,
     Value(i32),
 }
-
-/// Returns (first_operand, second_operand)
-fn extract_operands(stack: &mut Vec<CalculatorInput>) -> (Option<i32>, Option<i32>) {
-    let b = match stack.pop() {
-        Some(x) => match x {
-            CalculatorInput::Value(v) => Some(v),
-            _ => None,
-        },
-        None => None,
-    };
-    let a = match stack.pop() {
-        Some(x) => match x {
-            CalculatorInput::Value(v) => Some(v),
-            _ => None,
-        },
-        None => None,
-    };
-
-    (a, b)
-}
-
 pub fn evaluate(inputs: &[CalculatorInput]) -> Option<i32> {
-    let mut stack: Vec<CalculatorInput> = Vec::new();
-    for token in inputs {
-        match token {
-            CalculatorInput::Add => {
-                let (op_a, op_b) = extract_operands(&mut stack);
-                match op_a {
-                    Some(a) => match op_b {
-                        Some(b) => {
-                            let c = a + b;
-                            stack.push(CalculatorInput::Value(c));
-                        }
-                        None => {
-                            return None;
-                        }
-                    },
-                    None => {
-                        return None;
-                    }
-                }
-            }
-            CalculatorInput::Subtract => {
-                let (op_a, op_b) = extract_operands(&mut stack);
-                match op_a {
-                    Some(a) => match op_b {
-                        Some(b) => {
-                            let c = a - b;
-                            stack.push(CalculatorInput::Value(c));
-                        }
-                        None => {
-                            return None;
-                        }
-                    },
-                    None => {
-                        return None;
-                    }
-                }
-            }
-            CalculatorInput::Multiply => {
-                let (op_a, op_b) = extract_operands(&mut stack);
-                match op_a {
-                    Some(a) => match op_b {
-                        Some(b) => {
-                            let c = a * b;
-                            stack.push(CalculatorInput::Value(c));
-                        }
-                        None => {
-                            return None;
-                        }
-                    },
-                    None => {
-                        return None;
-                    }
-                }
-            }
-            CalculatorInput::Divide => {
-                let (op_a, op_b) = extract_operands(&mut stack);
-                match op_a {
-                    Some(a) => match op_b {
-                        Some(b) => {
-                            let c = a / b;
-                            stack.push(CalculatorInput::Value(c));
-                        }
-                        None => {
-                            return None;
-                        }
-                    },
-                    None => {
-                        return None;
-                    }
-                }
-            }
-            CalculatorInput::Value(v) => {
-                stack.push(CalculatorInput::Value(*v));
-            }
+    let v: Vec<i32> = vec![];
+    let mut result = inputs.iter().fold(v, |mut stack, input| {
+        if let Some(new) = match input {
+            CalculatorInput::Add => stack
+                .pop()
+                .and_then(|b| stack.pop().and_then(|a| Some(a + b))),
+            CalculatorInput::Subtract => stack
+                .pop()
+                .and_then(|b| stack.pop().and_then(|a| Some(a - b))),
+            CalculatorInput::Multiply => stack
+                .pop()
+                .and_then(|b| stack.pop().and_then(|a| Some(a * b))),
+            CalculatorInput::Divide => stack
+                .pop()
+                .and_then(|b| stack.pop().and_then(|a| Some(a / b))),
+            CalculatorInput::Value(value) => Some(*value),
+        } {
+            stack.push(new);
         }
-    }
-    if stack.len() == 1 {
-        let result = match stack[0] {
-            CalculatorInput::Value(v) => Some(v),
-            _ => None,
-        };
-
-        result
-    } else {
-        None
-    }
+        stack
+    });
+    result
+        .pop()
+        .and_then(|x| if result.is_empty() { Some(x) } else { None })
 }
