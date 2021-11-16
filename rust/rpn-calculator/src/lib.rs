@@ -1,3 +1,5 @@
+use std::ops::{Add, Div, Mul, Sub};
+
 #[derive(Debug)]
 pub enum CalculatorInput {
     Add,
@@ -6,22 +8,21 @@ pub enum CalculatorInput {
     Divide,
     Value(i32),
 }
+
+fn binary_op(stack: &mut Vec<i32>, f: impl Fn(i32, i32) -> i32) -> Option<i32> {
+    stack
+        .pop()
+        .and_then(|y| stack.pop().and_then(|x| Some(f(x, y))))
+}
+
 pub fn evaluate(inputs: &[CalculatorInput]) -> Option<i32> {
     let v: Vec<i32> = vec![];
     let mut result = inputs.iter().fold(v, |mut stack, input| {
         if let Some(new) = match input {
-            CalculatorInput::Add => stack
-                .pop()
-                .and_then(|b| stack.pop().and_then(|a| Some(a + b))),
-            CalculatorInput::Subtract => stack
-                .pop()
-                .and_then(|b| stack.pop().and_then(|a| Some(a - b))),
-            CalculatorInput::Multiply => stack
-                .pop()
-                .and_then(|b| stack.pop().and_then(|a| Some(a * b))),
-            CalculatorInput::Divide => stack
-                .pop()
-                .and_then(|b| stack.pop().and_then(|a| Some(a / b))),
+            CalculatorInput::Add => binary_op(&mut stack, i32::add),
+            CalculatorInput::Subtract => binary_op(&mut stack, i32::sub),
+            CalculatorInput::Multiply => binary_op(&mut stack, i32::mul),
+            CalculatorInput::Divide => binary_op(&mut stack, i32::div),
             CalculatorInput::Value(value) => Some(*value),
         } {
             stack.push(new);
