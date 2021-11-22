@@ -7,35 +7,30 @@ pub enum Comparison {
 }
 
 pub fn sublist<T: PartialEq>(first: &[T], second: &[T]) -> Comparison {
-    let (m, n) = (first.len(), second.len());
-    if m == 0 && n == 0 {
-        Comparison::Equal
-    } else if m == 0 {
-        // n > 0
-        Comparison::Sublist
-    } else if n == 0 {
-        // m > 0
-        Comparison::Superlist
-    } else if m == n {
-        // 0 < m == n
-        if first == second {
-            Comparison::Equal
-        } else {
-            Comparison::Unequal
+    match (first.len(), second.len()) {
+        (0, 0) => Comparison::Equal,
+        (0, _) => Comparison::Sublist,
+        (_, 0) => Comparison::Superlist,
+        (m, n) if m < n => {
+            if second.windows(m).any(|x| x == first) {
+                Comparison::Sublist
+            } else {
+                Comparison::Unequal
+            }
         }
-    } else if m < n {
-        // 0 < m < n
-        if second.windows(m).any(|x| x == first) {
-            Comparison::Sublist
-        } else {
-            Comparison::Unequal
+        (m, n) if m > n => {
+            if first.windows(n).any(|x| x == second) {
+                Comparison::Superlist
+            } else {
+                Comparison::Unequal
+            }
         }
-    } else {
-        // 0 < n < m
-        if first.windows(n).any(|x| x == second) {
-            Comparison::Superlist
-        } else {
-            Comparison::Unequal
+        (_, _) => {
+            if first == second {
+                Comparison::Equal
+            } else {
+                Comparison::Unequal
+            }
         }
     }
 }
