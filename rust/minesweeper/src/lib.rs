@@ -1,4 +1,4 @@
-const NEIBOURHOOD_OFFSETS: [(i32, i32); 8] = [
+static NEIBOURHOOD_OFFSETS: &'static [(i32, i32)] = &[
     (-1, 0),
     (-1, 1),
     (0, 1),
