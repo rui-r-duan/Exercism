@@ -1,6 +1,6 @@
 /// Check a Luhn checksum.
 pub fn is_valid(code: &str) -> bool {
-    let clean_code = code.chars().filter(|&c| c != ' ').rev().collect::<String>();
+    let clean_code = code.replace(" ", "").chars().rev().collect::<String>();
     if clean_code.chars().any(|x| !x.is_digit(10)) {
         return false;
     }
