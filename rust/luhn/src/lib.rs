@@ -1,7 +1,7 @@
 /// Check a Luhn checksum.
 pub fn is_valid(code: &str) -> bool {
     let clean_code = code.replace(" ", "").chars().rev().collect::<String>();
-    if clean_code.chars().any(|x| !x.is_digit(10)) {
+    if clean_code.chars().any(|x| !x.is_ascii_digit()) {
         return false;
     }
     let digit_bytes = clean_code.as_bytes();
