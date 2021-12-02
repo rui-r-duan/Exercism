@@ -1,9 +1,8 @@
 use enum_iterator::IntoEnumIterator;
 use int_enum::IntEnum;
-use serde::Serialize;
 
 #[repr(usize)]
-#[derive(Clone, Copy, Debug, Eq, IntEnum, IntoEnumIterator, PartialEq, Serialize)]
+#[derive(Clone, Copy, Debug, Eq, IntEnum, IntoEnumIterator, PartialEq)]
 pub enum ResistorColor {
     Black = 0,
     Brown = 1,
@@ -23,10 +22,7 @@ pub fn color_to_value(color: ResistorColor) -> usize {
 
 pub fn value_to_color_string(value: usize) -> String {
     match ResistorColor::from_int(value) {
-        Ok(color) => serde_json::to_string(&color)
-            .unwrap()
-            .trim_matches('"')
-            .to_string(),
+        Ok(color) => format!("{:?}", color),
         Err(_) => String::from("value out of range"),
     }
 }
