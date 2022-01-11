@@ -13,49 +13,30 @@ impl<'a> HighScores<'a> {
     }
 
     pub fn latest(&self) -> Option<u32> {
-        let n = self.scores.len();
-        if self.scores.len() > 0 {
-            return Some(self.scores[n - 1]);
-        } else {
-            return None;
-        }
+        self.scores.last().cloned()
     }
 
     pub fn personal_best(&self) -> Option<u32> {
-        let n = self.scores.len();
-        if n == 0 {
-            return None;
-        } else {
-            let mut max = 0;
-            for i in 0..n {
-                if self.scores[i] > max {
-                    max = self.scores[i];
-                }
-            }
-            return Some(max);
-        }
+        self.scores.iter().max().cloned()
     }
 
     pub fn personal_top_three(&self) -> Vec<u32> {
-        if self.scores.len() <= 3 {
-            let mut result = self.scores.to_vec();
-            result.sort_unstable_by(|a, b| b.cmp(a));
-            return result;
-        } else {
-            let mut result = vec![0; 3];
-            for &score in self.scores {
-                if score > result[0] {
-                    result[2] = result[1];
-                    result[1] = result[0];
-                    result[0] = score;
-                } else if score > result[1] {
-                    result[2] = result[1];
-                    result[1] = score;
-                } else if score > result[2] {
-                    result[2] = score;
+        self.scores
+            .iter()
+            .fold([0, 0, 0], |[a, b, c], &x| {
+                if x >= a {
+                    [x, a, b]
+                } else if x >= b {
+                    [a, x, b]
+                } else if x >= c {
+                    [a, b, x]
+                } else {
+                    [a, b, c]
                 }
-            }
-            return result;
-        }
+            })
+            .iter()
+            .take(self.scores.len()) // in case len < 3
+            .cloned()
+            .collect()
     }
 }
