@@ -12,14 +12,30 @@ pub fn secret(p: u64, b_pub: u64, a: u64) -> u64 {
     modular_pow(b_pub, a, p)
 }
 
-fn modular_pow(base: u64, exponent: u64, modulus: u64) -> u64 {
+// fn modular_pow(base: u64, exponent: u64, modulus: u64) -> u64 {
+//     if modulus == 1 {
+//         return 0;
+//     }
+//     let mut c = 1;
+//     for _ in 0..exponent {
+//         c = (c * base) % modulus
+//     }
+
+//     c
+// }
+
+fn modular_pow(mut base: u64, mut exponent: u64, modulus: u64) -> u64 {
     if modulus == 1 {
         return 0;
     }
-    let mut c = 1;
-    for _ in 0..exponent {
-        c = (c * base) % modulus
+    let mut result = 1;
+    base %= modulus;
+    while exponent > 0 {
+        if exponent % 2 == 1 {
+            result = (result * base) % modulus;
+        }
+        exponent >>= 1;
+        base = (base * base) % modulus;
     }
-
-    c
+    result
 }
