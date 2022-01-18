@@ -7,11 +7,10 @@ use std::fmt;
 /// Note the type signature: this function should return _the same_ reference to
 /// the winning hand(s) as were passed in, not reconstructed strings which happen to be equal.
 pub fn winning_hands<'a>(hands: &[&'a str]) -> Vec<&'a str> {
-    let mut hands_vec = vec![];
-    for &hand in hands {
-        let ph = PokerHand::new(hand);
-        hands_vec.push(ph);
-    }
+    let mut hands_vec = hands
+        .iter()
+        .map(|&h| PokerHand::new(h))
+        .collect::<Vec<PokerHand>>();
     hands_vec[..].sort_by(|a, b| b.partial_cmp(a).unwrap());
     let winner = &hands_vec[0];
     hands_vec
@@ -30,20 +29,18 @@ struct HandRankingCategory {
 #[derive(Debug)]
 struct PokerHand<'a> {
     card_str_ref: &'a str,
-    cards: [Card; 5],
+    cards: Vec<Card>,
     category: HandRankingCategory,
 }
 
 impl<'a> PokerHand<'a> {
     fn new(hand_str: &'a str) -> Self {
-        let mut cards: [Card; 5] = [Card::new(); 5];
-        let cards_str: Vec<&str> = hand_str.split(' ').collect();
-        let mut i = 0;
-        for c in cards_str {
-            let card = Card::from(c);
-            cards[i] = card;
-            i += 1;
-        }
+        let cards: Vec<Card> = hand_str
+            .split(' ')
+            .collect::<Vec<&str>>()
+            .iter()
+            .map(|&c| Card::from(c))
+            .collect();
         let category = PokerHand::calc_category(&cards);
         PokerHand {
             card_str_ref: hand_str,
@@ -298,14 +295,14 @@ impl<'a> PartialOrd for PokerHand<'a> {
     }
 }
 
-#[derive(Clone, Copy, PartialEq, PartialOrd)]
-struct Card {
-    rank: u8,
-    suit: u8,
-}
-
 type CardRank = u8;
 type CardSuit = u8;
+
+#[derive(Clone, Copy, PartialEq, PartialOrd)]
+struct Card {
+    rank: CardRank,
+    suit: CardSuit,
+}
 
 impl Card {
     const R: [(&'static str, CardRank); 13] = [
@@ -325,10 +322,6 @@ impl Card {
     ];
 
     const S: [(&'static str, CardSuit); 4] = [("C", 0), ("D", 1), ("H", 2), ("S", 3)];
-
-    fn new() -> Self {
-        Card { rank: 2, suit: 0 }
-    }
 
     fn from(card_str: &str) -> Self {
         let mut rank_map: HashMap<String, CardRank> = HashMap::new();
