@@ -1,12 +1,16 @@
 use std::cmp::Ordering;
 use std::collections::HashMap;
 use std::fmt;
+use std::mem;
+use type_layout::TypeLayout;
 
 /// Given a list of poker hands, return a list of those hands which win.
 ///
 /// Note the type signature: this function should return _the same_ reference to
 /// the winning hand(s) as were passed in, not reconstructed strings which happen to be equal.
 pub fn winning_hands<'a>(hands: &[&'a str]) -> Vec<&'a str> {
+    println!("{}", mem::size_of::<PokerHand>());
+    println!("{}", PokerHand::type_layout());
     let mut hands_vec = vec![];
     for &hand in hands {
         let ph = PokerHand::new(hand);
@@ -21,7 +25,8 @@ pub fn winning_hands<'a>(hands: &[&'a str]) -> Vec<&'a str> {
         .collect()
 }
 
-#[derive(Debug)]
+#[derive(TypeLayout, Debug)]
+#[repr(C)]
 struct PokerHand<'a> {
     card_str_ref: &'a str,
     cards: [Card; 5],
@@ -33,13 +38,13 @@ struct PokerHand<'a> {
 enum HandRankingCategory {
     FiveOfAKind(CardRank),
     /// sorted continuous sequence (descending)
-    StraightFlush(CardSuit, CardRank), // highest rank
+    StraightFlush(CardRank),
     /// 4 + 1(kicker)
     FourOfAKind(CardRank, CardRank),
     /// 3 + 2
     FullHouse(CardRank, CardRank),
     /// sorted sequence (descending)
-    Flush(CardSuit, Vec<CardRank>),
+    Flush(Vec<CardRank>),
     /// sorted continuous sequence (descending)
     Straight(CardRank),
     /// 3 + 1 + 1
@@ -75,7 +80,7 @@ impl<'a> PokerHand<'a> {
         if PokerHand::is_five_of_a_kind(cards) {
             (HandRankingCategory::FiveOfAKind(cards[0].rank), 10)
         } else if let (true, r) = PokerHand::is_straight_flush(cards) {
-            (HandRankingCategory::StraightFlush(cards[0].suit, r), 9)
+            (HandRankingCategory::StraightFlush(r), 9)
         } else if let (true, r1, r2) = PokerHand::is_four_of_a_kind(cards) {
             (HandRankingCategory::FourOfAKind(r1, r2), 8)
         } else if let (true, r1, r2) = PokerHand::is_full_house(cards) {
@@ -84,7 +89,7 @@ impl<'a> PokerHand<'a> {
             let mut ranks_sorted: Vec<CardRank> = cards.iter().map(|&x| x.rank).collect();
             ranks_sorted.sort();
             ranks_sorted.reverse();
-            (HandRankingCategory::Flush(cards[0].suit, ranks_sorted), 6)
+            (HandRankingCategory::Flush(ranks_sorted), 6)
         } else if let (true, r) = PokerHand::is_straight(cards) {
             (HandRankingCategory::Straight(r), 5)
         } else if let (true, r1, r2, r3) = PokerHand::is_three_of_a_kind(cards) {
@@ -99,6 +104,18 @@ impl<'a> PokerHand<'a> {
             ranks_sorted.reverse();
             (HandRankingCategory::HighCard(ranks_sorted), 1)
         }
+    }
+
+    fn rank_count(cards: &[Card]) -> Vec<(CardRank, u8)> {
+        let mut rc: [u8; 15] = [0; 15];
+        for &card in cards.iter() {
+            rc[card.rank as usize] += 1;
+        }
+        rc.iter()
+            .enumerate()
+            .filter(|&(_, &v)| v > 0)
+            .map(|(i, &v)| (i as CardRank, v))
+            .collect()
     }
 
     fn is_five_of_a_kind(cards: &[Card]) -> bool {
@@ -116,64 +133,34 @@ impl<'a> PokerHand<'a> {
                 return (false, cards[0].rank);
             }
         }
-        let mut ranks_sorted: Vec<CardRank> = cards.iter().map(|&x| x.rank).collect();
-        ranks_sorted.sort();
-        ranks_sorted.reverse();
-        match ranks_sorted[..] {
-            [14, 5, 4, 3, 2] => return (true, 5),
-            _ => (),
-        }
-        for i in 1..5 {
-            if ranks_sorted[i] != ranks_sorted[i - 1] - 1 {
-                return (false, cards[0].rank);
-            }
-        }
-        (true, cards[0].rank)
+        PokerHand::is_straight(cards)
     }
 
     fn is_four_of_a_kind(cards: &[Card]) -> (bool, CardRank, CardRank) {
-        let mut rank_count: [u8; 15] = [0; 15];
-        for &card in cards.iter() {
-            rank_count[card.rank as usize] += 1;
-        }
-        let result: Vec<(CardRank, u8)> = rank_count
-            .iter()
-            .enumerate()
-            .filter(|&(_, &v)| v > 0)
-            .map(|(i, &v)| (i as CardRank, v))
-            .collect();
-        if result.len() != 2 {
+        let rank_count = PokerHand::rank_count(cards);
+        if rank_count.len() != 2 {
             return (false, cards[0].rank, cards[1].rank);
         }
-        let (major, kick) = if result[0].1 > result[1].1 {
-            (result[0], result[1])
+        let (major, kicker) = if rank_count[0].1 > rank_count[1].1 {
+            (rank_count[0], rank_count[1])
         } else {
-            (result[1], result[0])
+            (rank_count[1], rank_count[0])
         };
         if major.1 != 4 {
             return (false, cards[0].rank, cards[1].rank);
         }
-        (true, major.0, kick.0)
+        (true, major.0, kicker.0)
     }
 
     fn is_full_house(cards: &[Card]) -> (bool, CardRank, CardRank) {
-        let mut rank_count: [u8; 15] = [0; 15];
-        for &card in cards.iter() {
-            rank_count[card.rank as usize] += 1;
-        }
-        let result: Vec<(CardRank, u8)> = rank_count
-            .iter()
-            .enumerate()
-            .filter(|&(_, &v)| v > 0)
-            .map(|(i, &v)| (i as CardRank, v))
-            .collect();
-        if result.len() != 2 {
+        let rank_count = PokerHand::rank_count(cards);
+        if rank_count.len() != 2 {
             return (false, cards[0].rank, cards[1].rank);
         }
-        let (major, minor) = if result[0].1 > result[1].1 {
-            (result[0], result[1])
+        let (major, minor) = if rank_count[0].1 > rank_count[1].1 {
+            (rank_count[0], rank_count[1])
         } else {
-            (result[1], result[0])
+            (rank_count[1], rank_count[0])
         };
         if major.1 != 3 || minor.1 != 2 {
             return (false, cards[0].rank, cards[1].rank);
@@ -207,21 +194,11 @@ impl<'a> PokerHand<'a> {
     }
 
     fn is_three_of_a_kind(cards: &[Card]) -> (bool, CardRank, CardRank, CardRank) {
-        let mut rank_count: [u8; 15] = [0; 15];
-        for &card in cards.iter() {
-            rank_count[card.rank as usize] += 1;
-        }
-        type Count = u8;
-        let mut result: Vec<(CardRank, Count)> = rank_count
-            .iter()
-            .enumerate()
-            .filter(|&(_, &v)| v > 0)
-            .map(|(i, &v)| (i as CardRank, v))
-            .collect();
-        if result.len() != 3 {
+        let mut rank_count = PokerHand::rank_count(cards);
+        if rank_count.len() != 3 {
             return (false, cards[0].rank, cards[1].rank, cards[2].rank);
         }
-        result.sort_by(|&(ar, ac), &(br, bc)| {
+        rank_count.sort_by(|&(ar, ac), &(br, bc)| {
             if bc > ac {
                 Ordering::Greater
             } else if bc < ac {
@@ -236,28 +213,18 @@ impl<'a> PokerHand<'a> {
                 }
             }
         });
-        if result[0].1 != 3 || result[1].1 != 1 || result[2].1 != 1 {
+        if rank_count[0].1 != 3 || rank_count[1].1 != 1 || rank_count[2].1 != 1 {
             return (false, cards[0].rank, cards[1].rank, cards[2].rank);
         }
-        (true, result[0].0, result[1].0, result[2].0)
+        (true, rank_count[0].0, rank_count[1].0, rank_count[2].0)
     }
 
     fn is_two_pair(cards: &[Card]) -> (bool, CardRank, CardRank, CardRank) {
-        let mut rank_count: [u8; 15] = [0; 15];
-        for &card in cards.iter() {
-            rank_count[card.rank as usize] += 1;
-        }
-        type Count = u8;
-        let mut result: Vec<(CardRank, Count)> = rank_count
-            .iter()
-            .enumerate()
-            .filter(|&(_, &v)| v > 0)
-            .map(|(i, &v)| (i as CardRank, v))
-            .collect();
-        if result.len() != 3 {
+        let mut rank_count = PokerHand::rank_count(cards);
+        if rank_count.len() != 3 {
             return (false, cards[0].rank, cards[1].rank, cards[2].rank);
         }
-        result.sort_by(|&(ar, ac), &(br, bc)| {
+        rank_count.sort_by(|&(ar, ac), &(br, bc)| {
             if bc > ac {
                 Ordering::Greater
             } else if bc < ac {
@@ -272,24 +239,14 @@ impl<'a> PokerHand<'a> {
                 }
             }
         });
-        if result[0].1 != 2 || result[1].1 != 2 || result[2].1 != 1 {
+        if rank_count[0].1 != 2 || rank_count[1].1 != 2 || rank_count[2].1 != 1 {
             return (false, cards[0].rank, cards[1].rank, cards[2].rank);
         }
-        (true, result[0].0, result[1].0, result[2].0)
+        (true, rank_count[0].0, rank_count[1].0, rank_count[2].0)
     }
 
     fn is_one_pair(cards: &[Card]) -> (bool, CardRank, CardRank, CardRank, CardRank) {
-        let mut rank_count: [u8; 15] = [0; 15];
-        for &card in cards.iter() {
-            rank_count[card.rank as usize] += 1;
-        }
-        type Count = u8;
-        let mut result: Vec<(CardRank, Count)> = rank_count
-            .iter()
-            .enumerate()
-            .filter(|&(_, &v)| v > 0)
-            .map(|(i, &v)| (i as CardRank, v))
-            .collect();
+        let mut result = PokerHand::rank_count(cards);
         if result.len() != 4 {
             return (
                 false,
@@ -344,11 +301,11 @@ impl<'a> PartialOrd for PokerHand<'a> {
         } else {
             // same category
             match &self.category {
-                HandRankingCategory::FiveOfAKind(r1) => match &other.category {
-                    HandRankingCategory::FiveOfAKind(r2) => {
-                        if r1 > r2 {
+                HandRankingCategory::FiveOfAKind(rank1) => match &other.category {
+                    HandRankingCategory::FiveOfAKind(rank2) => {
+                        if rank1 > rank2 {
                             Some(Ordering::Greater)
-                        } else if r1 < r2 {
+                        } else if rank1 < rank2 {
                             Some(Ordering::Less)
                         } else {
                             Some(Ordering::Equal)
@@ -356,8 +313,8 @@ impl<'a> PartialOrd for PokerHand<'a> {
                     }
                     _ => None,
                 },
-                HandRankingCategory::StraightFlush(_, rank1) => match &other.category {
-                    HandRankingCategory::StraightFlush(_, rank2) => {
+                HandRankingCategory::StraightFlush(rank1) => match &other.category {
+                    HandRankingCategory::StraightFlush(rank2) => {
                         if rank1 > rank2 {
                             Some(Ordering::Greater)
                         } else if rank1 < rank2 {
@@ -404,8 +361,8 @@ impl<'a> PartialOrd for PokerHand<'a> {
                     }
                     _ => None,
                 },
-                HandRankingCategory::Flush(_, ranks1) => match &other.category {
-                    HandRankingCategory::Flush(_, ranks2) => {
+                HandRankingCategory::Flush(ranks1) => match &other.category {
+                    HandRankingCategory::Flush(ranks2) => {
                         let mut result = Some(Ordering::Equal);
                         for i in 0..5 {
                             if ranks1[i] > ranks2[i] {
@@ -422,11 +379,11 @@ impl<'a> PartialOrd for PokerHand<'a> {
                     }
                     _ => None,
                 },
-                HandRankingCategory::Straight(r1) => match &other.category {
-                    HandRankingCategory::Straight(r2) => {
-                        if r1 > r2 {
+                HandRankingCategory::Straight(rank1) => match &other.category {
+                    HandRankingCategory::Straight(rank2) => {
+                        if rank1 > rank2 {
                             Some(Ordering::Greater)
-                        } else if r1 < r2 {
+                        } else if rank1 < rank2 {
                             Some(Ordering::Less)
                         } else {
                             Some(Ordering::Equal)
@@ -516,31 +473,6 @@ impl<'a> PartialOrd for PokerHand<'a> {
         }
     }
 }
-
-// #[derive(PartialEq)]
-// enum CardRank {
-//     Ace,
-//     King,
-//     Queen,
-//     Jack,
-//     Ten,
-//     Nine,
-//     Eight,
-//     Seven,
-//     Six,
-//     Five,
-//     Four,
-//     Three,
-//     Two,
-// }
-
-// #[derive(PartialEq)]
-// enum CardSuit {
-//     Club,
-//     Diamond,
-//     Heart,
-//     Spade,
-// }
 
 #[derive(Clone, Copy, PartialEq, PartialOrd)]
 struct Card {
