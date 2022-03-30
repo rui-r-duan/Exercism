@@ -10,8 +10,8 @@ pub fn winning_hands<'a>(hands: &[&'a str]) -> Vec<&'a str> {
     let mut hands_vec = hands
         .iter()
         .map(|&h| PokerHand::new(h))
-        .collect::<Vec<PokerHand>>();
-    hands_vec[..].sort_by(|a, b| b.partial_cmp(a).unwrap());
+        .collect::<Vec<_>>();
+    hands_vec.sort_by(|a, b| b.partial_cmp(a).unwrap());
     let winner = &hands_vec[0];
     hands_vec
         .iter()
