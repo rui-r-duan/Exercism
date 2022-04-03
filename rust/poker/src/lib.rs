@@ -1,5 +1,4 @@
 use std::cmp::Ordering;
-use std::collections::HashMap;
 use std::fmt;
 
 /// Given a list of poker hands, return a list of those hands which win.
@@ -7,10 +6,7 @@ use std::fmt;
 /// Note the type signature: this function should return _the same_ reference to
 /// the winning hand(s) as were passed in, not reconstructed strings which happen to be equal.
 pub fn winning_hands<'a>(hands: &[&'a str]) -> Vec<&'a str> {
-    let mut hands_vec = hands
-        .iter()
-        .map(|&h| PokerHand::new(h))
-        .collect::<Vec<_>>();
+    let mut hands_vec = hands.iter().map(|&h| PokerHand::new(h)).collect::<Vec<_>>();
     hands_vec.sort_by(|a, b| b.partial_cmp(a).unwrap());
     let winner = &hands_vec[0];
     hands_vec
@@ -305,105 +301,47 @@ struct Card {
 }
 
 impl Card {
-    const R: [(&'static str, CardRank); 13] = [
-        ("A", 14),
-        ("K", 13),
-        ("Q", 12),
-        ("J", 11),
-        ("10", 10),
-        ("9", 9),
-        ("8", 8),
-        ("7", 7),
-        ("6", 6),
-        ("5", 5),
-        ("4", 4),
-        ("3", 3),
-        ("2", 2),
-    ];
-
-    const S: [(&'static str, CardSuit); 4] = [("C", 0), ("D", 1), ("H", 2), ("S", 3)];
-
     fn from(card_str: &str) -> Self {
-        let mut rank_map: HashMap<String, CardRank> = HashMap::new();
-        for r in Card::R {
-            rank_map.insert(r.0.to_string(), r.1);
-        }
-        let mut suit_map: HashMap<String, CardSuit> = HashMap::new();
-        for s in Card::S {
-            suit_map.insert(s.0.to_string(), s.1);
-        }
-        match Card::read(card_str) {
-            Some((r, s)) => Card {
-                rank: *rank_map.get(&r).expect("invalid card rank"),
-                suit: *suit_map.get(&s).expect("invalid card suit"),
-            },
-            None => panic!("invalid card string"),
-        }
-    }
-
-    fn read(card_str: &str) -> Option<(String, String)> {
-        let chars: Vec<char> = card_str.chars().collect();
-        if chars.len() == 3 {
-            match chars[..] {
-                ['1', '0', c] if Card::is_valid_card_suit(c) => {
-                    return Some((String::from("10"), c.to_string()));
-                }
-                _ => return None,
-            }
-        } else if chars.len() == 2 {
-            match chars[..] {
-                [a, b] if Card::is_valid_card_rank(a) && Card::is_valid_card_suit(b) => {
-                    return Some((a.to_string(), b.to_string()));
-                }
-                _ => return None,
-            }
-        } else {
-            return None;
-        }
-    }
-
-    fn is_valid_card_suit(s: char) -> bool {
-        if s == 'C' || s == 'D' || s == 'H' || s == 'S' {
-            true
-        } else {
-            false
-        }
-    }
-
-    fn is_valid_card_rank(s: char) -> bool {
-        let lst = ['2', '3', '4', '5', '6', '7', '8', '9', 'J', 'Q', 'K', 'A'];
-        for c in lst {
-            if s == c {
-                return true;
-            }
-        }
-        false
+        let n = card_str.len();
+        let rank = match &card_str[..n - 1] {
+            "J" => 11,
+            "Q" => 12,
+            "K" => 13,
+            "A" => 14,
+            m => m.parse().unwrap(),
+        };
+        let suit = card_str.chars().nth(n - 1).unwrap() as u8;
+        Card { rank, suit }
     }
 }
 
 impl fmt::Debug for Card {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let mut rankstr = String::new();
-        let mut suitstr = String::new();
-        for (rs, rv) in Card::R {
-            if self.rank == rv {
-                rankstr = String::from(rs);
-            }
-        }
-        for (ss, sv) in Card::S {
-            if self.suit == sv {
-                suitstr = String::from(ss);
-            }
-        }
-        write!(f, "{}{}", rankstr, suitstr)
+        write!(f, "{}{}", self.rank, self.suit as char)
     }
+}
+
+#[test]
+fn test_print_card() {
+    let h = Card {
+        rank: 11,
+        suit: 'H' as u8,
+    };
+    let s = format!("{:?}", h);
+    assert_eq!(s, "11H");
+}
+
+#[test]
+fn test_hand_eq() {
+    let h1 = PokerHand::new("5H 5S 5D 9S 9D");
+    let h2 = PokerHand::new("5H 9S 5S 5S 9D");
+    assert!(h1 == h2);
 }
 
 #[test]
 fn test_hand_order() {
     let h1 = PokerHand::new("5H 5S 5D 9S 9D");
     let h2 = PokerHand::new("5H 9S 5S 4S 9D");
-    // assert!(h1 == h2);
     assert!(h1 > h2);
 }
 
