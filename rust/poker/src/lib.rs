@@ -41,58 +41,54 @@ impl<'a> PokerHand<'a> {
 
     fn calc_category(cards: &[Card]) -> HandRankingCategory {
         let rc = PokerHand::rank_count_sorted(cards);
-        if let (true, r) = PokerHand::is_straight_flush(cards) {
-            HandRankingCategory {
-                rank: 9,
-                data: vec![r],
+        let result = match rc.as_slice() {
+            [(a, 4), (b, 1)] => HandRankingCategory {
+                rank: 8, // four of a kind
+                data: vec![*a, *b],
+            },
+            [(a, 3), (b, 2)] => HandRankingCategory {
+                rank: 7, // full house
+                data: vec![*a, *b],
+            },
+            [(a, 3), (b, 1), (c, 1)] => HandRankingCategory {
+                rank: 4, // three of a kind
+                data: vec![*a, *b, *c],
+            },
+            [(a, 2), (b, 2), (c, 1)] => HandRankingCategory {
+                rank: 3, // two pair
+                data: vec![*a, *b, *c],
+            },
+            [(a, 2), (b, 1), (c, 1), (d, 1)] => HandRankingCategory {
+                rank: 2, // one pair
+                data: vec![*a, *b, *c, *d],
+            },
+            _ => {
+                let mut ranks_sorted: Vec<CardRank> = cards.iter().map(|&x| x.rank).collect();
+                ranks_sorted.sort();
+                ranks_sorted.reverse();
+                let is_same_suit = cards.windows(2).all(|c| c[0].suit == c[1].suit);
+                let (is_straight, r) = PokerHand::is_straight(&ranks_sorted);
+                match (is_same_suit, is_straight) {
+                    (true, true) => HandRankingCategory {
+                        rank: 9, // straight flush
+                        data: vec![r],
+                    },
+                    (true, false) => HandRankingCategory {
+                        rank: 6, // flush
+                        data: ranks_sorted,
+                    },
+                    (false, true) => HandRankingCategory {
+                        rank: 5, // straight
+                        data: vec![r],
+                    },
+                    _ => HandRankingCategory {
+                        rank: 1,
+                        data: ranks_sorted,
+                    },
+                }
             }
-        } else if let (true, r1, r2) = PokerHand::is_four_of_a_kind(cards, &rc) {
-            HandRankingCategory {
-                rank: 8,
-                data: vec![r1, r2],
-            }
-        } else if let (true, r1, r2) = PokerHand::is_full_house(cards, &rc) {
-            HandRankingCategory {
-                rank: 7,
-                data: vec![r1, r2],
-            }
-        } else if PokerHand::is_flush(cards) {
-            let mut ranks_sorted: Vec<CardRank> = cards.iter().map(|&x| x.rank).collect();
-            ranks_sorted.sort();
-            ranks_sorted.reverse();
-            HandRankingCategory {
-                rank: 6,
-                data: ranks_sorted,
-            }
-        } else if let (true, r) = PokerHand::is_straight(cards) {
-            HandRankingCategory {
-                rank: 5,
-                data: vec![r],
-            }
-        } else if let (true, r1, r2, r3) = PokerHand::is_three_of_a_kind(cards, &rc) {
-            HandRankingCategory {
-                rank: 4,
-                data: vec![r1, r2, r3],
-            }
-        } else if let (true, r1, r2, r3) = PokerHand::is_two_pair(cards, &rc) {
-            HandRankingCategory {
-                rank: 3,
-                data: vec![r1, r2, r3],
-            }
-        } else if let (true, r1, r2, r3, r4) = PokerHand::is_one_pair(cards, &rc) {
-            HandRankingCategory {
-                rank: 2,
-                data: vec![r1, r2, r3, r4],
-            }
-        } else {
-            let mut ranks_sorted: Vec<CardRank> = cards.iter().map(|&x| x.rank).collect();
-            ranks_sorted.sort();
-            ranks_sorted.reverse();
-            HandRankingCategory {
-                rank: 1,
-                data: ranks_sorted,
-            }
-        }
+        };
+        return result;
     }
 
     /// Returns rank counts sorted in descending order.
@@ -125,50 +121,7 @@ impl<'a> PokerHand<'a> {
         result
     }
 
-    fn is_straight_flush(cards: &[Card]) -> (bool, CardRank) {
-        for &card in cards.iter() {
-            if card.suit != cards[0].suit {
-                return (false, cards[0].rank);
-            }
-        }
-        PokerHand::is_straight(cards)
-    }
-
-    fn is_four_of_a_kind(cards: &[Card], rc: &Vec<(CardRank, u8)>) -> (bool, CardRank, CardRank) {
-        if rc.len() != 2 {
-            return (false, cards[0].rank, cards[1].rank);
-        }
-        let (major, kicker) = (rc[0], rc[1]);
-        if major.1 != 4 {
-            return (false, cards[0].rank, cards[1].rank);
-        }
-        (true, major.0, kicker.0)
-    }
-
-    fn is_full_house(cards: &[Card], rc: &Vec<(CardRank, u8)>) -> (bool, CardRank, CardRank) {
-        if rc.len() != 2 {
-            return (false, cards[0].rank, cards[1].rank);
-        }
-        let (major, minor) = (rc[0], rc[1]);
-        if major.1 != 3 || minor.1 != 2 {
-            return (false, cards[0].rank, cards[1].rank);
-        }
-        (true, major.0, minor.0)
-    }
-
-    fn is_flush(cards: &[Card]) -> bool {
-        for &card in cards.iter() {
-            if card.suit != cards[0].suit {
-                return false;
-            }
-        }
-        true
-    }
-
-    fn is_straight(cards: &[Card]) -> (bool, CardRank) {
-        let mut ranks_sorted: Vec<CardRank> = cards.iter().map(|&x| x.rank).collect();
-        ranks_sorted.sort();
-        ranks_sorted.reverse();
+    fn is_straight(ranks_sorted: &[CardRank]) -> (bool, CardRank) {
         match ranks_sorted[..] {
             [14, 5, 4, 3, 2] => return (true, 5),
             _ => (),
@@ -179,57 +132,6 @@ impl<'a> PokerHand<'a> {
             }
         }
         (true, ranks_sorted[0])
-    }
-
-    fn is_three_of_a_kind(
-        cards: &[Card],
-        rc: &Vec<(CardRank, u8)>,
-    ) -> (bool, CardRank, CardRank, CardRank) {
-        if rc.len() != 3 {
-            return (false, cards[0].rank, cards[1].rank, cards[2].rank);
-        }
-        if rc[0].1 != 3 || rc[1].1 != 1 || rc[2].1 != 1 {
-            return (false, cards[0].rank, cards[1].rank, cards[2].rank);
-        }
-        (true, rc[0].0, rc[1].0, rc[2].0)
-    }
-
-    fn is_two_pair(
-        cards: &[Card],
-        rc: &Vec<(CardRank, u8)>,
-    ) -> (bool, CardRank, CardRank, CardRank) {
-        if rc.len() != 3 {
-            return (false, cards[0].rank, cards[1].rank, cards[2].rank);
-        }
-        if rc[0].1 != 2 || rc[1].1 != 2 || rc[2].1 != 1 {
-            return (false, cards[0].rank, cards[1].rank, cards[2].rank);
-        }
-        (true, rc[0].0, rc[1].0, rc[2].0)
-    }
-
-    fn is_one_pair(
-        cards: &[Card],
-        rc: &Vec<(CardRank, u8)>,
-    ) -> (bool, CardRank, CardRank, CardRank, CardRank) {
-        if rc.len() != 4 {
-            return (
-                false,
-                cards[0].rank,
-                cards[1].rank,
-                cards[2].rank,
-                cards[3].rank,
-            );
-        }
-        if rc[0].1 != 2 || rc[1].1 != 1 || rc[2].1 != 1 || rc[3].1 != 1 {
-            return (
-                false,
-                cards[0].rank,
-                cards[1].rank,
-                cards[2].rank,
-                cards[3].rank,
-            );
-        }
-        (true, rc[0].0, rc[1].0, rc[2].0, rc[3].0)
     }
 }
 
