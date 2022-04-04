@@ -31,12 +31,7 @@ struct PokerHand<'a> {
 
 impl<'a> PokerHand<'a> {
     fn new(hand_str: &'a str) -> Self {
-        let cards: Vec<Card> = hand_str
-            .split(' ')
-            .collect::<Vec<&str>>()
-            .iter()
-            .map(|&c| Card::from(c))
-            .collect();
+        let cards: Vec<Card> = hand_str.split(' ').map(|c| Card::from(c)).collect();
         let category = PokerHand::calc_category(&cards);
         PokerHand {
             card_str_ref: hand_str,
