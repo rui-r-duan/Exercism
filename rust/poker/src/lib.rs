@@ -18,14 +18,14 @@ pub fn winning_hands<'a>(hands: &[&'a str]) -> Vec<&'a str> {
 
 #[derive(Debug)]
 struct HandRankingCategory {
-    rank: u8,
+    rank: u32,
     data: Vec<CardRank>,
 }
 
 #[derive(Debug)]
 struct PokerHand<'a> {
     card_str_ref: &'a str,
-    cards: Vec<Card>,
+    rank_sum: u32,
     category: HandRankingCategory,
 }
 
@@ -35,7 +35,7 @@ impl<'a> PokerHand<'a> {
         let category = PokerHand::calc_category(&cards);
         PokerHand {
             card_str_ref: hand_str,
-            cards,
+            rank_sum: cards.iter().map(|c| c.rank).sum(),
             category,
         }
     }
@@ -250,9 +250,7 @@ impl<'a> PokerHand<'a> {
 
 impl<'a> PartialEq for PokerHand<'a> {
     fn eq(&self, other: &Self) -> bool {
-        let a = self.cards.iter().fold(0_u8, |acc, item| acc + item.rank);
-        let b = other.cards.iter().fold(0_u8, |acc, item| acc + item.rank);
-        a == b
+        self.rank_sum == other.rank_sum
     }
 }
 
@@ -286,7 +284,7 @@ impl<'a> PartialOrd for PokerHand<'a> {
     }
 }
 
-type CardRank = u8;
+type CardRank = u32;
 type CardSuit = char;
 
 #[derive(Clone, Copy, PartialEq, PartialOrd)]
