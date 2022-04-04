@@ -292,7 +292,7 @@ impl<'a> PartialOrd for PokerHand<'a> {
 }
 
 type CardRank = u8;
-type CardSuit = u8;
+type CardSuit = char;
 
 #[derive(Clone, Copy, PartialEq, PartialOrd)]
 struct Card {
@@ -310,7 +310,7 @@ impl Card {
             "A" => 14,
             m => m.parse().unwrap(),
         };
-        let suit = card_str.chars().nth(n - 1).unwrap() as u8;
+        let suit = card_str.chars().nth(n - 1).unwrap();
         Card { rank, suit }
     }
 }
@@ -325,7 +325,7 @@ impl fmt::Debug for Card {
 fn test_print_card() {
     let h = Card {
         rank: 11,
-        suit: 'H' as u8,
+        suit: 'H',
     };
     let s = format!("{:?}", h);
     assert_eq!(s, "11H");
