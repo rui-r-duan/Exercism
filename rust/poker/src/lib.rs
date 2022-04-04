@@ -19,7 +19,7 @@ pub fn winning_hands<'a>(hands: &[&'a str]) -> Vec<&'a str> {
 #[derive(Debug)]
 struct HandRankingCategory {
     rank: u32,
-    data: Vec<CardRank>,
+    data: Vec<CardRank>, // sorted in descending order
 }
 
 #[derive(Debug)]
@@ -32,22 +32,16 @@ struct PokerHand<'a> {
 impl<'a> PokerHand<'a> {
     fn new(hand_str: &'a str) -> Self {
         let cards: Vec<Card> = hand_str.split(' ').map(|c| Card::from(c)).collect();
-        let category = PokerHand::calc_category(&cards);
         PokerHand {
             card_str_ref: hand_str,
             rank_sum: cards.iter().map(|c| c.rank).sum(),
-            category,
+            category: PokerHand::calc_category(&cards),
         }
     }
 
     fn calc_category(cards: &[Card]) -> HandRankingCategory {
         let rc = PokerHand::rank_count_sorted(cards);
-        if PokerHand::is_five_of_a_kind(cards) {
-            HandRankingCategory {
-                rank: 10,
-                data: vec![cards[0].rank],
-            }
-        } else if let (true, r) = PokerHand::is_straight_flush(cards) {
+        if let (true, r) = PokerHand::is_straight_flush(cards) {
             HandRankingCategory {
                 rank: 9,
                 data: vec![r],
@@ -129,15 +123,6 @@ impl<'a> PokerHand<'a> {
             }
         });
         result
-    }
-
-    fn is_five_of_a_kind(cards: &[Card]) -> bool {
-        for &card in cards.iter() {
-            if card.rank != cards[0].rank {
-                return false;
-            }
-        }
-        true
     }
 
     fn is_straight_flush(cards: &[Card]) -> (bool, CardRank) {
@@ -340,9 +325,6 @@ fn test_hand_order() {
 
 #[test]
 fn test_categories() {
-    let h1 = PokerHand::new("AS AC AH AD AH");
-    assert_eq!(h1.category.rank, 10);
-
     let h2 = PokerHand::new("JC 10C 9C 7C 8C");
     assert_eq!(h2.category.rank, 9);
 
