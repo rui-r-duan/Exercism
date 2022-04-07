@@ -103,21 +103,7 @@ impl<'a> PokerHand<'a> {
             .filter(|&(_, &v)| v > 0)
             .map(|(i, &v)| (i as CardRank, v))
             .collect();
-        result.sort_by(|&(ar, ac), &(br, bc)| {
-            if bc > ac {
-                Ordering::Greater
-            } else if bc < ac {
-                Ordering::Less
-            } else {
-                if br > ar {
-                    Ordering::Greater
-                } else if br < ar {
-                    Ordering::Less
-                } else {
-                    Ordering::Equal
-                }
-            }
-        });
+        result.sort_by(|&(ar, ac), &(br, bc)| bc.cmp(&ac).then(br.cmp(&ar)));
         result
     }
 
