@@ -201,6 +201,17 @@ fn test_hand_eq() {
 }
 
 #[test]
+fn test_hand_order_2() {
+    let h1 = PokerHand::new("3H 3D 4H 4D 5S"); // 4-high two-pair, sum = 19
+    let h2 = PokerHand::new("2H 3D 5H 5D 4S"); // 5-high one-pair, sum = 19
+    assert_eq!(h1.category_rank, HandCategory::TwoPair);
+    assert_eq!(h2.category_rank, HandCategory::OnePair);
+    assert!(h1 != h2);
+    assert!(h1 > h2);
+    assert!(h1 >= h2);
+}
+
+#[test]
 fn test_hand_order() {
     let h1 = PokerHand::new("5H 5S 5D 9S 9D");
     let h2 = PokerHand::new("5H 9S 5S 4S 9D"); // two-pair
