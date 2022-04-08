@@ -35,7 +35,6 @@ enum HandCategory {
 #[derive(Debug)]
 struct PokerHand<'a> {
     card_str_ref: &'a str,
-    rank_sum: u32,
     category_rank: HandCategory,
     card_ranks_sorted: Vec<CardRank>, // sorted by (count descending, rank descending)
 }
@@ -56,7 +55,6 @@ impl<'a> PokerHand<'a> {
         };
         PokerHand {
             card_str_ref: hand_str,
-            rank_sum: cards.iter().map(|c| c.rank).sum(),
             category_rank: PokerHand::calc_rank(&cards, &rc),
             card_ranks_sorted: if is_lowest_ace {
                 vec![5, 4, 3, 2, 1]
@@ -122,7 +120,7 @@ impl<'a> PokerHand<'a> {
 
 impl<'a> PartialEq for PokerHand<'a> {
     fn eq(&self, other: &Self) -> bool {
-        self.rank_sum == other.rank_sum
+        PokerHand::partial_cmp(self, other) == Some(Ordering::Equal)
     }
 }
 
