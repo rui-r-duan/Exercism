@@ -16,9 +16,24 @@ pub fn winning_hands<'a>(hands: &[&'a str]) -> Vec<&'a str> {
         .collect()
 }
 
+// Eq and Ord are not needed in this program,
+// but this enum has a total order in nature,
+// so we derive Eq and Ord.
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord)]
+enum HandCategory {
+    HighCard,
+    OnePair,
+    TwoPair,
+    ThreeOfAKind,
+    Straight,
+    Flush,
+    FullHouse,
+    FourOfAKind,
+    StraightFlush,
+}
 #[derive(Debug)]
-struct HandRankingCategory {
-    rank: u32,
+struct HandRank {
+    category: HandCategory,
     data: Vec<CardRank>, // sorted in descending order
 }
 
@@ -26,7 +41,7 @@ struct HandRankingCategory {
 struct PokerHand<'a> {
     card_str_ref: &'a str,
     rank_sum: u32,
-    category: HandRankingCategory,
+    rank: HandRank,
 }
 
 impl<'a> PokerHand<'a> {
@@ -35,31 +50,31 @@ impl<'a> PokerHand<'a> {
         PokerHand {
             card_str_ref: hand_str,
             rank_sum: cards.iter().map(|c| c.rank).sum(),
-            category: PokerHand::calc_category(&cards),
+            rank: PokerHand::calc_category(&cards),
         }
     }
 
-    fn calc_category(cards: &[Card]) -> HandRankingCategory {
+    fn calc_category(cards: &[Card]) -> HandRank {
         let rc = PokerHand::rank_count_sorted(cards);
         let result = match rc.as_slice() {
-            [(a, 4), (b, 1)] => HandRankingCategory {
-                rank: 8, // four of a kind
+            [(a, 4), (b, 1)] => HandRank {
+                category: HandCategory::FourOfAKind,
                 data: vec![*a, *b],
             },
-            [(a, 3), (b, 2)] => HandRankingCategory {
-                rank: 7, // full house
+            [(a, 3), (b, 2)] => HandRank {
+                category: HandCategory::FullHouse,
                 data: vec![*a, *b],
             },
-            [(a, 3), (b, 1), (c, 1)] => HandRankingCategory {
-                rank: 4, // three of a kind
+            [(a, 3), (b, 1), (c, 1)] => HandRank {
+                category: HandCategory::ThreeOfAKind,
                 data: vec![*a, *b, *c],
             },
-            [(a, 2), (b, 2), (c, 1)] => HandRankingCategory {
-                rank: 3, // two pair
+            [(a, 2), (b, 2), (c, 1)] => HandRank {
+                category: HandCategory::TwoPair,
                 data: vec![*a, *b, *c],
             },
-            [(a, 2), (b, 1), (c, 1), (d, 1)] => HandRankingCategory {
-                rank: 2, // one pair
+            [(a, 2), (b, 1), (c, 1), (d, 1)] => HandRank {
+                category: HandCategory::OnePair,
                 data: vec![*a, *b, *c, *d],
             },
             _ => {
@@ -69,20 +84,20 @@ impl<'a> PokerHand<'a> {
                 let is_same_suit = cards.windows(2).all(|c| c[0].suit == c[1].suit);
                 let (is_straight, r) = PokerHand::is_straight(&ranks_sorted);
                 match (is_same_suit, is_straight) {
-                    (true, true) => HandRankingCategory {
-                        rank: 9, // straight flush
+                    (true, true) => HandRank {
+                        category: HandCategory::StraightFlush,
                         data: vec![r],
                     },
-                    (true, false) => HandRankingCategory {
-                        rank: 6, // flush
+                    (true, false) => HandRank {
+                        category: HandCategory::Flush,
                         data: ranks_sorted,
                     },
-                    (false, true) => HandRankingCategory {
-                        rank: 5, // straight
+                    (false, true) => HandRank {
+                        category: HandCategory::Straight,
                         data: vec![r],
                     },
-                    _ => HandRankingCategory {
-                        rank: 1,
+                    _ => HandRank {
+                        category: HandCategory::HighCard,
                         data: ranks_sorted,
                     },
                 }
@@ -146,14 +161,22 @@ fn ranks_cmp(ranks1: &[CardRank], ranks2: &[CardRank]) -> Ordering {
 
 impl<'a> PartialOrd for PokerHand<'a> {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        if self.category.rank > other.category.rank {
+        if self.rank.category > other.rank.category {
             Some(Ordering::Greater)
-        } else if self.category.rank < other.category.rank {
+        } else if self.rank.category < other.rank.category {
             Some(Ordering::Less)
         } else {
             // same category
-            Some(ranks_cmp(&self.category.data, &other.category.data))
+            Some(ranks_cmp(&self.rank.data, &other.rank.data))
         }
+        // Some(
+        //     self.category
+        //         .hand_category
+        //         .cmp(&other.category.hand_category)
+        //         // self.then(other) evaluates other before evalutes itself,
+        //         // so ranks_cmp() will be called first.
+        //         .then(ranks_cmp(&self.category.data, &other.category.data)),
+        // )
     }
 }
 
@@ -207,42 +230,44 @@ fn test_hand_eq() {
 #[test]
 fn test_hand_order() {
     let h1 = PokerHand::new("5H 5S 5D 9S 9D");
-    let h2 = PokerHand::new("5H 9S 5S 4S 9D");
+    let h2 = PokerHand::new("5H 9S 5S 4S 9D"); // two-pair
+    assert_eq!(h1.rank.category, HandCategory::FullHouse);
+    assert_eq!(h2.rank.category, HandCategory::TwoPair);
     assert!(h1 > h2);
 }
 
 #[test]
 fn test_categories() {
     let h2 = PokerHand::new("JC 10C 9C 7C 8C");
-    assert_eq!(h2.category.rank, 9);
+    assert_eq!(h2.rank.category, HandCategory::StraightFlush);
 
     let h3 = PokerHand::new("5C 5D 5H 5S 2D");
-    assert_eq!(h3.category.rank, 8);
+    assert_eq!(h3.rank.category, HandCategory::FourOfAKind);
 
     let h4 = PokerHand::new("6S 6H 6D KC KH");
-    assert_eq!(h4.category.rank, 7);
+    assert_eq!(h4.rank.category, HandCategory::FullHouse);
 
     let h5 = PokerHand::new("JD 9D 8D 4D 3D");
-    assert_eq!(h5.category.rank, 6);
+    assert_eq!(h5.rank.category, HandCategory::Flush);
 
     let h6 = PokerHand::new("10D 9S 8H 7D 6C");
-    assert_eq!(h6.category.rank, 5);
+    assert_eq!(h6.rank.category, HandCategory::Straight);
 
     let h7 = PokerHand::new("QC QS QH 9H 2S");
-    assert_eq!(h7.category.rank, 4);
+    assert_eq!(h7.rank.category, HandCategory::ThreeOfAKind);
 
     let h8 = PokerHand::new("JH JS 3C 3S 2H");
-    assert_eq!(h8.category.rank, 3);
+    assert_eq!(h8.rank.category, HandCategory::TwoPair);
 
     let h9 = PokerHand::new("10S 10H 8S 7H 4C");
-    assert_eq!(h9.category.rank, 2);
+    assert_eq!(h9.rank.category, HandCategory::OnePair);
 
     let h10 = PokerHand::new("KD QD 7S 4S 3H");
-    assert_eq!(h10.category.rank, 1);
+    assert_eq!(h10.rank.category, HandCategory::HighCard);
 
     let h11 = PokerHand::new("10D JH QS KD AC");
-    assert_eq!(h11.category.rank, 5);
+    assert_eq!(h11.rank.category, HandCategory::Straight);
 
     let h12 = PokerHand::new("4D AH 3S 2D 5C");
-    assert_eq!(h12.category.rank, 5);
+    assert_eq!(h12.rank.category, HandCategory::Straight);
 }
