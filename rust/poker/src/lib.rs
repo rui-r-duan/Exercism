@@ -73,7 +73,7 @@ fn calc_rank(cards: &[Card], rc: &[(CardRank, u8)]) -> HandCategory {
         [(_, 2), (_, 2), (_, 1)] => HandCategory::TwoPair,
         [(_, 2), (_, 1), (_, 1), (_, 1)] => HandCategory::OnePair,
         _ => {
-            let mut ranks_sorted: Vec<CardRank> = cards.iter().map(|&x| x.rank).collect();
+            let mut ranks_sorted: Vec<CardRank> = cards.iter().map(|x| x.rank).collect();
             ranks_sorted.sort();
             ranks_sorted.reverse();
             let is_same_suit = cards.windows(2).all(|c| c[0].suit == c[1].suit);
@@ -92,7 +92,7 @@ fn calc_rank(cards: &[Card], rc: &[(CardRank, u8)]) -> HandCategory {
 /// Returns rank counts sorted in descending order.
 fn rank_count_sorted(cards: &[Card]) -> Vec<(CardRank, u8)> {
     let mut rc: [u8; 15] = [0; 15];
-    for &card in cards.iter() {
+    for card in cards.iter() {
         rc[card.rank as usize] += 1;
     }
     let mut result: Vec<(CardRank, u8)> = rc
@@ -154,7 +154,7 @@ impl<'a> PartialOrd for PokerHand<'a> {
 type CardRank = u32;
 type CardSuit = char;
 
-#[derive(Clone, Copy, PartialEq, PartialOrd)]
+#[derive(PartialEq, PartialOrd)]
 struct Card {
     rank: CardRank,
     suit: CardSuit,
