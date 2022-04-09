@@ -33,40 +33,41 @@ enum HandCategory {
 }
 
 #[derive(Debug)]
+struct HandRank {
+    category_rank: HandCategory,
+    card_ranks_sorted: Vec<CardRank>,
+}
+
+#[derive(Debug)]
 struct PokerHand<'a> {
     card_str_ref: &'a str,
-    category_rank: HandCategory,
-    card_ranks_sorted: Vec<CardRank>, // sorted by (count descending, rank descending)
+    rank: HandRank,
 }
 
 impl<'a> PokerHand<'a> {
     fn new(hand_str: &'a str) -> Self {
-        let cards: Vec<Card> = hand_str.split(' ').map(|c| Card::from(c)).collect();
-        let rc = rank_count_sorted(&cards);
-        let mut card_ranks_sorted = vec![];
-        for &(v, c) in rc.iter() {
-            for _ in 0..c {
-                card_ranks_sorted.push(v);
-            }
-        }
-        let is_lowest_ace = match card_ranks_sorted.as_slice() {
-            [14, 5, 4, 3, 2] => true,
-            _ => false,
-        };
         PokerHand {
             card_str_ref: hand_str,
-            category_rank: calc_rank(&cards, &rc),
-            card_ranks_sorted: if is_lowest_ace {
-                vec![5, 4, 3, 2, 1]
-            } else {
-                card_ranks_sorted
-            },
+            rank: calc_rank(hand_str),
         }
     }
 }
 
-fn calc_rank(cards: &[Card], rc: &[(CardRank, u8)]) -> HandCategory {
-    let result = match rc {
+fn calc_rank(hand_str: &str) -> HandRank {
+    let cards: Vec<Card> = hand_str.split(' ').map(|c| Card::from(c)).collect();
+    let rc = rank_count_sorted(&cards);
+    let mut card_ranks_sorted = vec![];
+    for &(v, c) in rc.iter() {
+        for _ in 0..c {
+            card_ranks_sorted.push(v);
+        }
+    }
+    let is_lowest_ace = match card_ranks_sorted.as_slice() {
+        [14, 5, 4, 3, 2] => true,
+        _ => false,
+    };
+
+    let category_rank = match rc.as_slice() {
         [(_, 4), (_, 1)] => HandCategory::FourOfAKind,
         [(_, 3), (_, 2)] => HandCategory::FullHouse,
         [(_, 3), (_, 1), (_, 1)] => HandCategory::ThreeOfAKind,
@@ -86,7 +87,15 @@ fn calc_rank(cards: &[Card], rc: &[(CardRank, u8)]) -> HandCategory {
             }
         }
     };
-    return result;
+
+    HandRank {
+        category_rank,
+        card_ranks_sorted: if is_lowest_ace {
+            vec![5, 4, 3, 2, 1]
+        } else {
+            card_ranks_sorted
+        },
+    }
 }
 
 /// Returns rank counts sorted in descending order.
@@ -144,9 +153,13 @@ impl<'a> PartialEq for PokerHand<'a> {
 impl<'a> PartialOrd for PokerHand<'a> {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         Some(
-            self.category_rank
-                .cmp(&other.category_rank)
-                .then(ranks_cmp(&self.card_ranks_sorted, &other.card_ranks_sorted)),
+            self.rank
+                .category_rank
+                .cmp(&other.rank.category_rank)
+                .then(ranks_cmp(
+                    &self.rank.card_ranks_sorted,
+                    &other.rank.card_ranks_sorted,
+                )),
         )
     }
 }
@@ -206,8 +219,8 @@ mod tests {
     fn test_hand_order_2() {
         let h1 = PokerHand::new("3H 3D 4H 4D 5S"); // 4-high two-pair, sum = 19
         let h2 = PokerHand::new("2H 3D 5H 5D 4S"); // 5-high one-pair, sum = 19
-        assert_eq!(h1.category_rank, HandCategory::TwoPair);
-        assert_eq!(h2.category_rank, HandCategory::OnePair);
+        assert_eq!(h1.rank.category_rank, HandCategory::TwoPair);
+        assert_eq!(h2.rank.category_rank, HandCategory::OnePair);
         assert!(h1 != h2);
         assert!(h1 > h2);
         assert!(h1 >= h2);
@@ -217,44 +230,44 @@ mod tests {
     fn test_hand_order() {
         let h1 = PokerHand::new("5H 5S 5D 9S 9D");
         let h2 = PokerHand::new("5H 9S 5S 4S 9D"); // two-pair
-        assert_eq!(h1.category_rank, HandCategory::FullHouse);
-        assert_eq!(h2.category_rank, HandCategory::TwoPair);
+        assert_eq!(h1.rank.category_rank, HandCategory::FullHouse);
+        assert_eq!(h2.rank.category_rank, HandCategory::TwoPair);
         assert!(h1 > h2);
     }
 
     #[test]
     fn test_categories() {
         let h2 = PokerHand::new("JC 10C 9C 7C 8C");
-        assert_eq!(h2.category_rank, HandCategory::StraightFlush);
+        assert_eq!(h2.rank.category_rank, HandCategory::StraightFlush);
 
         let h3 = PokerHand::new("5C 5D 5H 5S 2D");
-        assert_eq!(h3.category_rank, HandCategory::FourOfAKind);
+        assert_eq!(h3.rank.category_rank, HandCategory::FourOfAKind);
 
         let h4 = PokerHand::new("6S 6H 6D KC KH");
-        assert_eq!(h4.category_rank, HandCategory::FullHouse);
+        assert_eq!(h4.rank.category_rank, HandCategory::FullHouse);
 
         let h5 = PokerHand::new("JD 9D 8D 4D 3D");
-        assert_eq!(h5.category_rank, HandCategory::Flush);
+        assert_eq!(h5.rank.category_rank, HandCategory::Flush);
 
         let h6 = PokerHand::new("10D 9S 8H 7D 6C");
-        assert_eq!(h6.category_rank, HandCategory::Straight);
+        assert_eq!(h6.rank.category_rank, HandCategory::Straight);
 
         let h7 = PokerHand::new("QC QS QH 9H 2S");
-        assert_eq!(h7.category_rank, HandCategory::ThreeOfAKind);
+        assert_eq!(h7.rank.category_rank, HandCategory::ThreeOfAKind);
 
         let h8 = PokerHand::new("JH JS 3C 3S 2H");
-        assert_eq!(h8.category_rank, HandCategory::TwoPair);
+        assert_eq!(h8.rank.category_rank, HandCategory::TwoPair);
 
         let h9 = PokerHand::new("10S 10H 8S 7H 4C");
-        assert_eq!(h9.category_rank, HandCategory::OnePair);
+        assert_eq!(h9.rank.category_rank, HandCategory::OnePair);
 
         let h10 = PokerHand::new("KD QD 7S 4S 3H");
-        assert_eq!(h10.category_rank, HandCategory::HighCard);
+        assert_eq!(h10.rank.category_rank, HandCategory::HighCard);
 
         let h11 = PokerHand::new("10D JH QS KD AC");
-        assert_eq!(h11.category_rank, HandCategory::Straight);
+        assert_eq!(h11.rank.category_rank, HandCategory::Straight);
 
         let h12 = PokerHand::new("4D AH 3S 2D 5C");
-        assert_eq!(h12.category_rank, HandCategory::Straight);
+        assert_eq!(h12.rank.category_rank, HandCategory::Straight);
     }
 }
