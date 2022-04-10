@@ -57,7 +57,7 @@ impl<'a> PokerHand<'a> {
 fn calc_rank(hand_str: &str) -> HandRank {
     let mut suits = vec![];
     let mut ranks = vec![];
-    hand_str.split(' ').for_each(|c| {
+    for c in hand_str.split(' ') {
         let n = c.len();
         let rank = match &c[..n - 1] {
             "J" => 11,
@@ -69,7 +69,7 @@ fn calc_rank(hand_str: &str) -> HandRank {
         let suit = c.chars().nth(n - 1).unwrap();
         suits.push(suit);
         ranks.push(rank);
-    });
+    }
     let rc = rank_count_sorted(&ranks);
     let mut card_ranks_sorted = vec![];
     for &(v, c) in rc.iter() {
@@ -181,6 +181,8 @@ mod tests {
     fn test_hand_order_2() {
         let h1 = PokerHand::new("3H 3D 4H 4D 5S"); // 4-high two-pair, sum = 19
         let h2 = PokerHand::new("2H 3D 5H 5D 4S"); // 5-high one-pair, sum = 19
+
+        // assert_eq requires Debug trait
         assert_eq!(h1.rank.category_rank, HandCategory::TwoPair);
         assert_eq!(h2.rank.category_rank, HandCategory::OnePair);
         assert!(h1 != h2);
