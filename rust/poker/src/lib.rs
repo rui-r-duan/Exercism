@@ -1,5 +1,4 @@
 use std::cmp::Ordering;
-use std::fmt;
 
 /// Given a list of poker hands, return a list of those hands which win.
 ///
@@ -32,6 +31,8 @@ enum HandCategory {
     StraightFlush,
 }
 
+type CardRank = u32;
+
 #[derive(Debug)]
 struct HandRank {
     category_rank: HandCategory,
@@ -54,8 +55,22 @@ impl<'a> PokerHand<'a> {
 }
 
 fn calc_rank(hand_str: &str) -> HandRank {
-    let cards: Vec<Card> = hand_str.split(' ').map(|c| Card::from(c)).collect();
-    let rc = rank_count_sorted(&cards);
+    let mut suits = vec![];
+    let mut ranks = vec![];
+    hand_str.split(' ').for_each(|c| {
+        let n = c.len();
+        let rank = match &c[..n - 1] {
+            "J" => 11,
+            "Q" => 12,
+            "K" => 13,
+            "A" => 14,
+            m => m.parse().unwrap(),
+        };
+        let suit = c.chars().nth(n - 1).unwrap();
+        suits.push(suit);
+        ranks.push(rank);
+    });
+    let rc = rank_count_sorted(&ranks);
     let mut card_ranks_sorted = vec![];
     for &(v, c) in rc.iter() {
         for _ in 0..c {
@@ -74,7 +89,7 @@ fn calc_rank(hand_str: &str) -> HandRank {
         [(_, 2), (_, 1), (_, 1), (_, 1)] => HandCategory::OnePair,
         _ => {
             // [(_, 1), (_, 1), (_, 1), (_, 1), (_, 1)]
-            let is_same_suit = cards.windows(2).all(|c| c[0].suit == c[1].suit);
+            let is_same_suit = suits.windows(2).all(|s| s[0] == s[1]);
             let is_straight =
                 is_lowest_ace || card_ranks_sorted.windows(2).all(|w| w[0] - 1 == w[1]);
             match (is_same_suit, is_straight) {
@@ -97,10 +112,11 @@ fn calc_rank(hand_str: &str) -> HandRank {
 }
 
 /// Returns rank counts sorted in descending order.
-fn rank_count_sorted(cards: &[Card]) -> Vec<(CardRank, u8)> {
+fn rank_count_sorted(ranks: &[CardRank]) -> Vec<(CardRank, u8)> {
     let mut rc: [u8; 15] = [0; 15];
-    for card in cards.iter() {
-        rc[card.rank as usize] += 1;
+    for rank in ranks {
+        // equivalent to ranks.into_iter()
+        rc[*rank as usize] += 1;
     }
     let mut result: Vec<(CardRank, u8)> = rc
         .iter()
@@ -150,50 +166,9 @@ impl<'a> PartialOrd for PokerHand<'a> {
         )
     }
 }
-
-type CardRank = u32;
-type CardSuit = char;
-
-#[derive(PartialEq, PartialOrd)]
-struct Card {
-    rank: CardRank,
-    suit: CardSuit,
-}
-
-impl Card {
-    fn from(card_str: &str) -> Self {
-        let n = card_str.len();
-        let rank = match &card_str[..n - 1] {
-            "J" => 11,
-            "Q" => 12,
-            "K" => 13,
-            "A" => 14,
-            m => m.parse().unwrap(),
-        };
-        let suit = card_str.chars().nth(n - 1).unwrap();
-        Card { rank, suit }
-    }
-}
-
-impl fmt::Debug for Card {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{}{}", self.rank, self.suit as char)
-    }
-}
-
 #[cfg(test)]
 mod tests {
-    use super::{Card, HandCategory, PokerHand};
-
-    #[test]
-    fn test_print_card() {
-        let h = Card {
-            rank: 11,
-            suit: 'H',
-        };
-        let s = format!("{:?}", h);
-        assert_eq!(s, "11H");
-    }
+    use super::{HandCategory, PokerHand};
 
     #[test]
     fn test_hand_eq() {
