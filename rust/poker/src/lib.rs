@@ -66,7 +66,6 @@ fn calc_rank(hand_str: &str) -> HandRank {
         [14, 5, 4, 3, 2] => true,
         _ => false,
     };
-
     let category_rank = match rc.as_slice() {
         [(_, 4), (_, 1)] => HandCategory::FourOfAKind,
         [(_, 3), (_, 2)] => HandCategory::FullHouse,
@@ -74,11 +73,10 @@ fn calc_rank(hand_str: &str) -> HandRank {
         [(_, 2), (_, 2), (_, 1)] => HandCategory::TwoPair,
         [(_, 2), (_, 1), (_, 1), (_, 1)] => HandCategory::OnePair,
         _ => {
-            let mut ranks_sorted: Vec<CardRank> = cards.iter().map(|x| x.rank).collect();
-            ranks_sorted.sort();
-            ranks_sorted.reverse();
+            // [(_, 1), (_, 1), (_, 1), (_, 1), (_, 1)]
             let is_same_suit = cards.windows(2).all(|c| c[0].suit == c[1].suit);
-            let is_straight = is_straight(&ranks_sorted);
+            let is_straight =
+                is_lowest_ace || card_ranks_sorted.windows(2).all(|w| w[0] - 1 == w[1]);
             match (is_same_suit, is_straight) {
                 (true, true) => HandCategory::StraightFlush,
                 (true, false) => HandCategory::Flush,
@@ -114,19 +112,6 @@ fn rank_count_sorted(cards: &[Card]) -> Vec<(CardRank, u8)> {
     result
 }
 
-fn is_straight(ranks_sorted: &[CardRank]) -> bool {
-    match ranks_sorted {
-        [14, 5, 4, 3, 2] => return true,
-        _ => (),
-    }
-    for i in 1..5 {
-        if ranks_sorted[i] != ranks_sorted[i - 1] - 1 {
-            return false;
-        }
-    }
-    true
-}
-
 fn ranks_cmp(ranks1: &[CardRank], ranks2: &[CardRank]) -> Ordering {
     assert_eq!(ranks1.len(), ranks2.len());
     let mut result = Ordering::Equal;
@@ -156,10 +141,12 @@ impl<'a> PartialOrd for PokerHand<'a> {
             self.rank
                 .category_rank
                 .cmp(&other.rank.category_rank)
-                .then(ranks_cmp(
-                    &self.rank.card_ranks_sorted,
-                    &other.rank.card_ranks_sorted,
-                )),
+                // use `then_with()` for lazy evaluation of ranks_cmp
+                // if use `then()`, then ranks_cmp will be evaluated
+                // no matter the first cmp is Equal or not.
+                .then_with(|| {
+                    ranks_cmp(&self.rank.card_ranks_sorted, &other.rank.card_ranks_sorted)
+                }),
         )
     }
 }
