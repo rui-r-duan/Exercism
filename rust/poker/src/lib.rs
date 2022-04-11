@@ -33,10 +33,10 @@ enum HandCategory {
 
 type CardRank = u32;
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord)]
 struct HandRank {
     category_rank: HandCategory,
-    card_ranks_sorted: Vec<CardRank>,
+    card_ranks_sorted: Vec<CardRank>, // sorted by (card_rank_count, card_rank)
 }
 
 #[derive(Debug)]
@@ -128,23 +128,6 @@ fn rank_count_sorted(ranks: &[CardRank]) -> Vec<(CardRank, u8)> {
     result
 }
 
-fn ranks_cmp(ranks1: &[CardRank], ranks2: &[CardRank]) -> Ordering {
-    assert_eq!(ranks1.len(), ranks2.len());
-    let mut result = Ordering::Equal;
-    for i in 0..ranks1.len() {
-        if ranks1[i] > ranks2[i] {
-            result = Ordering::Greater;
-            break;
-        } else if ranks1[i] < ranks2[i] {
-            result = Ordering::Less;
-            break;
-        } else {
-            continue;
-        }
-    }
-    result
-}
-
 impl<'a> PartialEq for PokerHand<'a> {
     fn eq(&self, other: &Self) -> bool {
         PokerHand::partial_cmp(self, other) == Some(Ordering::Equal)
@@ -153,17 +136,7 @@ impl<'a> PartialEq for PokerHand<'a> {
 
 impl<'a> PartialOrd for PokerHand<'a> {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        Some(
-            self.rank
-                .category_rank
-                .cmp(&other.rank.category_rank)
-                // use `then_with()` for lazy evaluation of ranks_cmp
-                // if use `then()`, then ranks_cmp will be evaluated
-                // no matter the first cmp is Equal or not.
-                .then_with(|| {
-                    ranks_cmp(&self.rank.card_ranks_sorted, &other.rank.card_ranks_sorted)
-                }),
-        )
+        Some(self.rank.cmp(&other.rank))
     }
 }
 #[cfg(test)]
