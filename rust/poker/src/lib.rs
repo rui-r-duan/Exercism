@@ -91,7 +91,8 @@ fn calc_rank(hand_str: &str) -> HandRank {
             // [(_, 1), (_, 1), (_, 1), (_, 1), (_, 1)]
             let is_same_suit = suits.windows(2).all(|s| s[0] == s[1]);
             let is_straight =
-                is_lowest_ace || card_ranks_sorted.windows(2).all(|w| w[0] - 1 == w[1]);
+                // is_lowest_ace || card_ranks_sorted.windows(2).all(|w| w[0] - 1 == w[1]);
+                is_lowest_ace || card_ranks_sorted[4] == card_ranks_sorted[0] - 4;
             match (is_same_suit, is_straight) {
                 (true, true) => HandCategory::StraightFlush,
                 (true, false) => HandCategory::Flush,
