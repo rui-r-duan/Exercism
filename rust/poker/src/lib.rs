@@ -1,18 +1,28 @@
 use std::cmp::Ordering;
+use std::collections::BinaryHeap;
 
 /// Given a list of poker hands, return a list of those hands which win.
 ///
 /// Note the type signature: this function should return _the same_ reference to
 /// the winning hand(s) as were passed in, not reconstructed strings which happen to be equal.
 pub fn winning_hands<'a>(hands: &[&'a str]) -> Vec<&'a str> {
-    let mut hands_vec = hands.iter().map(|&h| PokerHand::new(h)).collect::<Vec<_>>();
-    hands_vec.sort_by(|a, b| b.partial_cmp(a).unwrap());
-    let winner = &hands_vec[0];
-    hands_vec
-        .iter()
-        .filter(|&a| a == winner)
-        .map(|a| a.card_str_ref)
-        .collect()
+    if hands.len() == 0 {
+        vec![]
+    } else {
+        let mut hands_max_heap = hands
+            .iter()
+            .map(|&h| PokerHand::new(h))
+            .collect::<BinaryHeap<PokerHand>>();
+        let winner = hands_max_heap.pop().unwrap();
+        let mut result = vec![winner.card_str_ref];
+        while let Some(hand) = hands_max_heap.pop() {
+            if hand < winner {
+                break;
+            }
+            result.push(hand.card_str_ref);
+        }
+        result
+    }
 }
 
 // Eq and Ord are not needed in this program,
@@ -137,9 +147,28 @@ impl<'a> PartialEq for PokerHand<'a> {
 
 impl<'a> PartialOrd for PokerHand<'a> {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        Some(self.rank.cmp(&other.rank))
+        Some(self.cmp(&other))
     }
 }
+
+impl<'a> Eq for PokerHand<'a> {}
+
+// Ord is needed for `collect::<BinaryHeap<PokerHand>>()`
+//
+// fn collect<B>(self) -> B
+// where
+//     B: FromIterator<Self::Item>,
+//
+//
+// impl<T> FromIterator<T> for BinaryHeap<T>
+// where
+//     T: Ord,
+impl<'a> Ord for PokerHand<'a> {
+    fn cmp(&self, other: &Self) -> Ordering {
+        self.rank.cmp(&other.rank)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::{HandCategory, PokerHand};
