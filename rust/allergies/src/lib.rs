@@ -1,5 +1,5 @@
 pub struct Allergies {
-    data: Vec<(Allergen, u32)>,
+    allergens: u32,
 }
 
 #[derive(Copy, Clone, Debug, PartialEq)]
@@ -15,39 +15,37 @@ pub enum Allergen {
 }
 
 use Allergen::*;
+
+const ALLERGENS: [Allergen; 8] = [
+    Eggs,
+    Peanuts,
+    Shellfish,
+    Strawberries,
+    Tomatoes,
+    Chocolate,
+    Pollen,
+    Cats,
+];
+
 impl Allergies {
     pub fn new(score: u32) -> Self {
-        let table = [
-            Eggs,
-            Peanuts,
-            Shellfish,
-            Strawberries,
-            Tomatoes,
-            Chocolate,
-            Pollen,
-            Cats,
-        ];
-        const N: usize = 8;
-        let marks: [u32; N] = table.map(|allergen| (allergen as u32) & score);
-        let mut data: Vec<(Allergen, u32)> = Vec::new();
-        for i in 0..N {
-            data.push((table[i], marks[i]));
-        }
-        Allergies { data }
+        Allergies { allergens: score }
     }
 
     pub fn is_allergic_to(&self, allergen: &Allergen) -> bool {
-        self.data
-            .iter()
-            .find(|(a, v)| a == allergen && *v != 0)
-            .is_some()
+        let allergen = *allergen as u32;
+        self.allergens & allergen == allergen
     }
 
     pub fn allergies(&self) -> Vec<Allergen> {
-        self.data
-            .iter()
-            .filter(|(_a, v)| *v != 0)
-            .map(|&(a, _v)| a)
+        ALLERGENS
+            .into_iter()
+            .filter(|x: &Allergen| self.is_allergic_to(x))
             .collect()
+        // ALLERGENS
+        //     .iter()
+        //     .filter(|x: &&Allergen| self.is_allergic_to(x))
+        //     .cloned()
+        //     .collect()
     }
 }
