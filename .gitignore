@@ -6,3 +6,6 @@
 **/Cargo.lock
 
 **/.gitignore
+.vscode
+__pycache__
+venv
