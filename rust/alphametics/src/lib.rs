@@ -2,85 +2,74 @@ use itertools::Itertools;
 use std::collections::{HashMap, HashSet};
 
 pub fn solve(input: &str) -> Option<HashMap<char, u8>> {
-    let tokens: Vec<&str> = input.split_ascii_whitespace().collect();
-    let equal_sign_pos = tokens
-        .iter()
-        .position(|&e| e == "==")
-        .expect("input does not have `==`");
-    let left = &tokens[0..equal_sign_pos];
-    let right = &tokens[equal_sign_pos + 1..];
-    let left_terms: Vec<String> = left
-        .split(|&t| t.trim() == "+")
-        .flat_map(|t| t.to_vec())
-        .map(|t| t.chars().collect::<String>())
-        .collect::<Vec<_>>();
-    let right_term: String = right[0].chars().collect::<String>();
-
-    let characters: Vec<char> = Vec::from_iter(
-        input
-            .chars()
-            .filter(|t| t.is_alphabetic())
-            .collect::<HashSet<char>>()
+    let values = parse(input);
+    for perm in (0..10u8).permutations(values.len()) {
+        let terms = values
             .iter()
-            .cloned(),
-    );
-
-    let permutations = "0123456789".chars().permutations(characters.len());
-    for perm in permutations {
-        let dict = std::iter::zip(characters.clone(), perm).collect::<Vec<_>>();
-
-        let mut found_err = false;
-        let mut addends: Vec<u64> = Vec::new();
-        for term in left_terms.iter() {
-            match term_to_num(term, &dict) {
-                Ok(num) => addends.push(num),
-                Err(_) => {
-                    found_err = true;
-                }
-            }
-        }
-        if found_err {
+            .zip(perm.iter())
+            .map(|(&(ch, value, leading), &digit)| (ch, value, leading, digit))
+            .collect::<Vec<_>>();
+        if terms
+            .iter()
+            .any(|&(_ch, _val, leading, digit)| leading && digit == 0)
+        {
             continue;
         }
-
-        match term_to_num(&right_term, &dict) {
-            Ok(num) => {
-                let sum = num;
-                if addends.iter().sum::<u64>() == sum {
-                    let mut map: HashMap<char, u8> = HashMap::new();
-                    for (c, v) in dict {
-                        let nv = v.to_digit(10).unwrap() as u8;
-                        map.insert(c, nv);
-                    }
-                    return Some(map);
-                }
-            }
-            Err(_) => {
-                found_err = true;
-            }
-        }
-        if found_err {
-            continue;
+        let sum = terms
+            .iter()
+            .map(|&(_, value, _, digit)| value * (digit as i64))
+            .sum::<i64>();
+        if sum == 0 {
+            return Some(terms.iter().map(|&(ch, _, _, digit)| (ch, digit)).collect());
         }
     }
-
     None
 }
 
-fn term_to_num(term: &str, dict: &[(char, char)]) -> Result<u64, String> {
-    let num_str = term
-        .chars()
-        .map(|c| dict.iter().find(|pair| pair.0 == c).unwrap().1)
-        .collect::<String>();
-    if num_str.chars().nth(0).unwrap() == '0' {
-        return Err(format!("Leading zero is not valid: {}", num_str));
+fn parse(input: &str) -> Vec<(char, i64, bool)> {
+    // EXAMPLE:
+    // PARSE "I + BB == ILL" to integer expression: 11*B-99*I-11*L.
+    // The expression is represented as follows (psudo code):
+    // vec![('B',11,leading=true), ('I',-99,leading=true),('L',-11,false)]
+    //
+    // Later, we test if it is equal to zero for value (B,I,L).
+    //
+    // from right to left
+    // prev = ' ', value = -1
+    // 'L', map={(L, -1)}, prev='L', value*=10 => value=-10
+    // 'L', map={(L, -1+value=-11)}, prev='L', value*=10 => value=-100
+    // 'I', map={(I, 0+value=-100)}, prev='I', value*=10 => value=-1000
+    // ' ', prev=='I' is alphabetic => leading_set={I}, value=1, prev=' '
+    // '=', prev='='
+    // '=', prev='='
+    // ' ', prev=' '
+    // 'B', map={(L,-11),(I,-100),(B, 0+value=1)}, prev='B', value*=10 => value=10
+    // 'B', map={(L,-11),(I,-100),(B, 1+value=11)}, prev='B', value*=10 => value=100
+    // ' ', prev == 'B' is alphabetic => leading_set={I, B}, value=1, prev = ' '
+    // 'I', map={(L,-11),(I,-100+value=-99),(B,11)}, prev='I', value*=10 => value=10
+    // END
+    let mut map = HashMap::new();
+    let mut prev = ' ';
+    let mut value = -1;
+    let mut leadings = HashSet::new();
+    for ch in input.chars().rev() {
+        match ch {
+            'A'..='Z' => {
+                *map.entry(ch).or_insert(0) += value;
+                prev = ch;
+                value *= 10;
+            }
+            _ => {
+                if prev.is_alphabetic() {
+                    leadings.insert(prev);
+                    value = 1;
+                    prev = ch;
+                }
+            }
+        }
     }
-    match num_str.parse() {
-        Ok(v) => Ok(v),
-        Err(err) => Err(format!(
-            "Failed conversion to u32: {:?} for {}",
-            err.kind(),
-            num_str
-        )),
-    }
+    leadings.insert(prev);
+    map.iter()
+        .map(|(&k, &v)| (k, v, leadings.contains(&k)))
+        .collect()
 }
