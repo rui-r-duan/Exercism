@@ -4,23 +4,24 @@ use std::collections::{HashMap, HashSet};
 pub fn solve(input: &str) -> Option<HashMap<char, u8>> {
     let values = parse(input);
     for perm in (0..10u8).permutations(values.len()) {
-        let terms = values
-            .iter()
-            .zip(perm.iter())
-            .map(|(&(ch, value, leading), &digit)| (ch, value, leading, digit))
-            .collect::<Vec<_>>();
+        let terms = values.iter().zip(perm.iter()).collect::<Vec<_>>();
         if terms
             .iter()
-            .any(|&(_ch, _val, leading, digit)| leading && digit == 0)
+            .any(|(&(_ch, _val, leading), &digit)| leading && digit == 0)
         {
             continue;
         }
         let sum = terms
             .iter()
-            .map(|&(_, value, _, digit)| value * (digit as i64))
+            .map(|(&(_, value, _), &digit)| value * (digit as i64))
             .sum::<i64>();
         if sum == 0 {
-            return Some(terms.iter().map(|&(ch, _, _, digit)| (ch, digit)).collect());
+            return Some(
+                terms
+                    .iter()
+                    .map(|(&(ch, _, _), &digit)| (ch, digit))
+                    .collect(),
+            );
         }
     }
     None
