@@ -2,24 +2,22 @@ use itertools::Itertools;
 use std::collections::{HashMap, HashSet};
 
 pub fn solve(input: &str) -> Option<HashMap<char, u8>> {
-    let values = parse(input);
+    let (values, leading_char_count) = parse(input);
     for perm in (0..10u8).permutations(values.len()) {
-        let terms = values.iter().zip(perm.iter()).collect::<Vec<_>>();
-        if terms
-            .iter()
-            .any(|(&(_ch, _val, leading), &digit)| leading && digit == 0)
-        {
+        if perm[..leading_char_count].iter().any(|&digit| digit == 0) {
             continue;
         }
-        let sum = terms
+        let sum = values
             .iter()
-            .map(|(&(_, value, _), &digit)| value * (digit as i64))
+            .zip(perm.iter())
+            .map(|(&(_, _, value), &digit)| value * (digit as i64))
             .sum::<i64>();
         if sum == 0 {
             return Some(
-                terms
+                values
                     .iter()
-                    .map(|(&(ch, _, _), &digit)| (ch, digit))
+                    .zip(perm.iter())
+                    .map(|(&(_, ch, _), &digit)| (ch, digit))
                     .collect(),
             );
         }
@@ -27,7 +25,7 @@ pub fn solve(input: &str) -> Option<HashMap<char, u8>> {
     None
 }
 
-fn parse(input: &str) -> Vec<(char, i64, bool)> {
+fn parse(input: &str) -> (Vec<(bool, char, i64)>, usize) {
     // EXAMPLE:
     // PARSE "I + BB == ILL" to integer expression: 11*B-99*I-11*L.
     // The expression is represented as follows (psudo code):
@@ -70,7 +68,20 @@ fn parse(input: &str) -> Vec<(char, i64, bool)> {
         }
     }
     leadings.insert(prev);
-    map.iter()
-        .map(|(&k, &v)| (k, v, leadings.contains(&k)))
-        .collect()
+    let mut result = Vec::new();
+    for elem in leadings.iter() {
+        let (&k, &v) = map.get_key_value(elem).unwrap();
+        result.push((true, k, v));
+    }
+    for elem in HashSet::from_iter(map.keys().cloned()).difference(&leadings) {
+        let (&k, &v) = map.get_key_value(elem).unwrap();
+        result.push((false, k, v));
+    }
+    (result, leadings.len())
+}
+
+#[test]
+fn test_parse() {
+    let a = parse("SEND + MORE == MONEY");
+    println!("{:?}", a);
 }
