@@ -42,7 +42,6 @@ impl Forth {
 
     fn eval_cmd(&mut self, cmd: &str) -> Result {
         let cmd = cmd.to_ascii_lowercase();
-        println!("{:?}", self.def_buffer);
         if self.is_collecting_word_def() {
             if cmd != ";" {
                 self.def_buffer.push(cmd);
@@ -52,7 +51,6 @@ impl Forth {
                         return Ok(());
                     }
                     Err(e) => {
-                        eprintln!("{:?}: {:?}", e, self.def_buffer);
                         self.def_buffer.clear();
                         return Err(e);
                     }
