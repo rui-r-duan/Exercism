@@ -1,12 +1,24 @@
-use std::collections::HashMap;
-
 pub type Value = i32;
 pub type Result = std::result::Result<(), Error>;
 
+#[derive(Debug)]
+struct Definition {
+    name: String,
+    body: String,
+    env_end: usize, // Forth.env[0..env_end] denotes the env for the definition
+}
+
+#[derive(Debug)]
+struct ExecTerm {
+    term: String,
+    env_end: usize, // Forth.env[0..env_end] denotes the current env
+}
+
+#[derive(Debug)]
 pub struct Forth {
-    env: HashMap<String, Vec<String>>,
-    stack: Vec<Value>,
-    def_buffer: Vec<String>,
+    env: Vec<Definition>,
+    valst: Vec<Value>,     // value stack
+    execst: Vec<ExecTerm>, // execution stack
 }
 
 #[derive(Debug, PartialEq)]
@@ -20,157 +32,193 @@ pub enum Error {
 impl Forth {
     pub fn new() -> Forth {
         Self {
-            env: HashMap::new(),
-            stack: Vec::new(),
-            def_buffer: Vec::new(),
+            env: Vec::new(),
+            valst: Vec::new(),
+            execst: Vec::new(),
         }
     }
 
     pub fn stack(&self) -> &[Value] {
-        self.stack.as_slice()
+        self.valst.as_slice()
     }
 
     pub fn eval(&mut self, input: &str) -> Result {
-        for s in input.split(' ') {
-            self.eval_cmd(s)?;
+        let term_strings = self.parse(input)?;
+        for ts in term_strings {
+            self.execst.push(ExecTerm {
+                term: ts.to_ascii_uppercase(),
+                env_end: self.env.len(),
+            });
+            while !self.execst.is_empty() {
+                let ts = self.execst.pop().unwrap();
+                self.eval_execterm(&ts)?;
+            }
         }
-        if !self.def_buffer.is_empty() {
-            return Err(Error::InvalidWord);
-        }
+
         Ok(())
     }
 
-    fn eval_cmd(&mut self, cmd: &str) -> Result {
-        let cmd = cmd.to_ascii_lowercase();
-        if self.is_collecting_word_def() {
-            if cmd != ";" {
-                self.def_buffer.push(cmd);
-            } else {
-                match self.add_word() {
-                    Ok(_) => {
-                        return Ok(());
-                    }
-                    Err(e) => {
-                        self.def_buffer.clear();
-                        return Err(e);
+    /// Parse the input to term string
+    fn parse<'a>(&self, input: &'a str) -> std::result::Result<Vec<&'a str>, Error> {
+        const NOT_STARTED: i32 = 0;
+        const BEGIN_WORD: i32 = 1;
+        const BEGIN_DEF: i32 = 2;
+        let mut beg = usize::MAX;
+        let mut end;
+        let mut state = NOT_STARTED;
+        let mut ans: Vec<&str> = Vec::new();
+        for (i, ch) in input.char_indices() {
+            if state == NOT_STARTED {
+                if !ch.is_ascii_whitespace() {
+                    if ch == ':' {
+                        state = BEGIN_DEF;
+                        beg = i;
+                    } else if ch == ';' {
+                        return Err(Error::InvalidWord);
+                    } else {
+                        state = BEGIN_WORD;
+                        beg = i;
                     }
                 }
+            } else if state == BEGIN_WORD {
+                if ch.is_ascii_whitespace() {
+                    end = i;
+                    ans.push(&input[beg..end]);
+                    state = NOT_STARTED;
+                }
+            } else if state == BEGIN_DEF {
+                if ch == ';' {
+                    end = i;
+                    ans.push(&input[beg..end]);
+                    state = NOT_STARTED;
+                } else if ch == ':' {
+                    panic!("invalid input, nested def is not supported");
+                }
+            } else {
+                panic!("program error in parse()");
             }
+        }
+        if state == BEGIN_WORD {
+            end = input.len();
+            ans.push(&input[beg..end]);
+        } else if state == BEGIN_DEF {
+            return Err(Error::InvalidWord);
+        }
+        Ok(ans)
+    }
+
+    // ts is an ASCII uppercase string
+    fn eval_execterm(&mut self, execterm: &ExecTerm) -> Result {
+        let ts = &execterm.term;
+        let env_end = execterm.env_end;
+        let bytes: &[u8] = ts.as_bytes();
+        if bytes.len() >= 1 && bytes[0] as char == ':' {
+            // add word definition to self.env
+            // the definition encloses its environment: self.env[0..env_end]
+            self.parse_def(ts, env_end)?;
+        } else if is_num(ts) {
+            self.valst.push(ts.parse::<i32>().unwrap());
+        } else if let Some(index) = self.env_get(ts, env_end) {
+            let def = &self.env[index];
+            let term_strings = self.parse(&def.body)?;
+            for ts in term_strings.into_iter().rev() {
+                self.execst.push(ExecTerm {
+                    term: ts.to_string(),
+                    env_end: def.env_end,
+                });
+            }
+        } else if ts == "+" {
+            let b = self.valst.pop();
+            let a = self.valst.pop();
+            if b.is_none() || a.is_none() {
+                return Err(Error::StackUnderflow);
+            }
+            self.valst.push(a.unwrap() + b.unwrap());
+        } else if ts == "-" {
+            let b = self.valst.pop();
+            let a = self.valst.pop();
+            if b.is_none() || a.is_none() {
+                return Err(Error::StackUnderflow);
+            }
+            self.valst.push(a.unwrap() - b.unwrap());
+        } else if ts == "*" {
+            let b = self.valst.pop();
+            let a = self.valst.pop();
+            if b.is_none() || a.is_none() {
+                return Err(Error::StackUnderflow);
+            }
+            self.valst.push(a.unwrap() * b.unwrap());
+        } else if ts == "/" {
+            let b = self.valst.pop();
+            let a = self.valst.pop();
+            if b.is_none() || a.is_none() {
+                return Err(Error::StackUnderflow);
+            }
+            if let Some(bv) = b {
+                if bv == 0 {
+                    return Err(Error::DivisionByZero);
+                }
+            }
+            self.valst.push(a.unwrap() / b.unwrap());
+        } else if ts == "DROP" {
+            let a = self.valst.pop();
+            if a.is_none() {
+                return Err(Error::StackUnderflow);
+            }
+        } else if ts == "DUP" {
+            if self.valst.len() < 1 {
+                return Err(Error::StackUnderflow);
+            }
+            let a = self.valst[self.valst.len() - 1];
+            self.valst.push(a);
+        } else if ts == "OVER" {
+            if self.valst.len() < 2 {
+                return Err(Error::StackUnderflow);
+            }
+            self.valst.push(self.valst[self.valst.len() - 2]);
+        } else if ts == "SWAP" {
+            let b = self.valst.pop();
+            let a = self.valst.pop();
+            if b.is_none() || a.is_none() {
+                return Err(Error::StackUnderflow);
+            }
+            self.valst.push(b.unwrap());
+            self.valst.push(a.unwrap());
         } else {
-            if cmd == ":" {
-                self.def_buffer.push(cmd);
-            } else if is_num(&cmd) {
-                self.stack.push(cmd.parse().unwrap());
-            } else {
-                let mut word_cmds: Vec<String> = Vec::new();
-                let word_cmds_ref: Option<&Vec<String>> = self.env.get(&cmd);
-                match word_cmds_ref {
-                    Some(word_def) => {
-                        for word_cmd in word_def {
-                            word_cmds.push(word_cmd.to_owned());
-                        }
-                    }
-                    None => {
-                        if cmd == "drop" {
-                            match self.stack.pop() {
-                                Some(_) => (),
-                                None => {
-                                    return Err(Error::StackUnderflow);
-                                }
-                            }
-                        } else if cmd == "swap" {
-                            if self.stack.len() < 2 {
-                                return Err(Error::StackUnderflow);
-                            }
-                            let top = self.stack.pop().unwrap();
-                            let second = self.stack.pop().unwrap();
-                            self.stack.push(top);
-                            self.stack.push(second);
-                        } else if cmd == "over" {
-                            if self.stack.len() < 2 {
-                                return Err(Error::StackUnderflow);
-                            }
-                            let n = self.stack.len();
-                            let second = self.stack[n - 2];
-                            self.stack.push(second);
-                        } else if cmd == "dup" {
-                            let n = self.stack.len();
-                            if n < 1 {
-                                return Err(Error::StackUnderflow);
-                            }
-                            self.stack.push(self.stack[n - 1]);
-                        } else if cmd == "+" {
-                            let n = self.stack.len();
-                            if n < 2 {
-                                return Err(Error::StackUnderflow);
-                            }
-                            let b = self.stack.pop().unwrap();
-                            let a = self.stack.pop().unwrap();
-                            self.stack.push(a + b);
-                        } else if cmd == "-" {
-                            let n = self.stack.len();
-                            if n < 2 {
-                                return Err(Error::StackUnderflow);
-                            }
-                            let b = self.stack.pop().unwrap();
-                            let a = self.stack.pop().unwrap();
-                            self.stack.push(a - b);
-                        } else if cmd == "*" {
-                            let n = self.stack.len();
-                            if n < 2 {
-                                return Err(Error::StackUnderflow);
-                            }
-                            let b = self.stack.pop().unwrap();
-                            let a = self.stack.pop().unwrap();
-                            self.stack.push(a * b);
-                        } else if cmd == "/" {
-                            let n = self.stack.len();
-                            if n < 2 {
-                                return Err(Error::StackUnderflow);
-                            }
-                            let b = self.stack.pop().unwrap();
-                            if b == 0 {
-                                return Err(Error::DivisionByZero);
-                            }
-                            let a = self.stack.pop().unwrap();
-                            self.stack.push(a / b);
-                        } else {
-                            return Err(Error::UnknownWord);
-                        }
-                    }
-                }
-                for token in word_cmds {
-                    self.eval_cmd(&token)?;
-                }
+            return Err(Error::UnknownWord);
+        }
+        Ok(())
+    }
+
+    fn parse_def(&mut self, term_string: &str, env_end: usize) -> std::result::Result<(), Error> {
+        let tokens = term_string.split_ascii_whitespace().collect::<Vec<_>>();
+        if tokens.len() < 3 {
+            // ";" is not included
+            return Err(Error::InvalidWord);
+        }
+        if is_num(tokens[1]) {
+            return Err(Error::InvalidWord);
+        }
+        self.env.push(Definition {
+            name: tokens[1].to_ascii_uppercase(),
+            body: tokens[2..].join(" "),
+            env_end,
+        });
+        Ok(())
+    }
+
+    // pre: word is ASCII uppercase
+    fn env_get(&self, word: &str, env_end: usize) -> Option<usize> {
+        assert!(env_end <= self.env.len());
+        for i in (0..env_end).rev() {
+            if self.env[i].name == word {
+                return Some(i);
             }
         }
-        Ok(())
-    }
-
-    fn is_collecting_word_def(&self) -> bool {
-        self.def_buffer.len() > 0
-    }
-
-    fn add_word(&mut self) -> Result {
-        let buf = &self.def_buffer;
-        if buf.len() < 3 || buf[0] != ":" {
-            return Err(Error::InvalidWord);
-        }
-        let word_name = buf[1].clone();
-        if !is_valid_word_name(&word_name) {
-            return Err(Error::InvalidWord);
-        }
-        let word_def = buf[2..].iter().cloned().collect::<Vec<_>>();
-        self.env.insert(word_name, word_def);
-        self.def_buffer.clear();
-        Ok(())
+        None
     }
 }
 
 fn is_num(token: &str) -> bool {
     token.chars().all(|c| c.is_digit(10))
-}
-
-fn is_valid_word_name(name: &str) -> bool {
-    !is_num(name)
 }
