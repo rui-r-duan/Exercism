@@ -128,43 +128,21 @@ impl Forth {
                 });
             }
         } else if ts == "+" {
-            let b = self.valst.pop();
-            let a = self.valst.pop();
-            if b.is_none() || a.is_none() {
-                return Err(Error::StackUnderflow);
-            }
-            self.valst.push(a.unwrap() + b.unwrap());
+            self.arith(|a, b| Ok(a + b))?
         } else if ts == "-" {
-            let b = self.valst.pop();
-            let a = self.valst.pop();
-            if b.is_none() || a.is_none() {
-                return Err(Error::StackUnderflow);
-            }
-            self.valst.push(a.unwrap() - b.unwrap());
+            self.arith(|a, b| Ok(a - b))?
         } else if ts == "*" {
-            let b = self.valst.pop();
-            let a = self.valst.pop();
-            if b.is_none() || a.is_none() {
-                return Err(Error::StackUnderflow);
-            }
-            self.valst.push(a.unwrap() * b.unwrap());
+            self.arith(|a, b| Ok(a * b))?
         } else if ts == "/" {
-            let b = self.valst.pop();
-            let a = self.valst.pop();
-            if b.is_none() || a.is_none() {
-                return Err(Error::StackUnderflow);
-            }
-            if let Some(bv) = b {
-                if bv == 0 {
-                    return Err(Error::DivisionByZero);
+            self.arith(|a, b| {
+                if b == 0 {
+                    Err(Error::DivisionByZero)
+                } else {
+                    Ok(a / b)
                 }
-            }
-            self.valst.push(a.unwrap() / b.unwrap());
+            })?
         } else if ts == "DROP" {
-            let a = self.valst.pop();
-            if a.is_none() {
-                return Err(Error::StackUnderflow);
-            }
+            self.pop()?;
         } else if ts == "DUP" {
             if self.valst.len() < 1 {
                 return Err(Error::StackUnderflow);
@@ -177,13 +155,10 @@ impl Forth {
             }
             self.valst.push(self.valst[self.valst.len() - 2]);
         } else if ts == "SWAP" {
-            let b = self.valst.pop();
-            let a = self.valst.pop();
-            if b.is_none() || a.is_none() {
-                return Err(Error::StackUnderflow);
-            }
-            self.valst.push(b.unwrap());
-            self.valst.push(a.unwrap());
+            let top = self.pop()?;
+            let bottom = self.pop()?;
+            self.valst.push(top);
+            self.valst.push(bottom);
         } else {
             return Err(Error::UnknownWord);
         }
@@ -216,6 +191,23 @@ impl Forth {
             }
         }
         None
+    }
+
+    fn pop(&mut self) -> std::result::Result<Value, Error> {
+        match self.valst.pop() {
+            Some(v) => Ok(v),
+            None => Err(Error::StackUnderflow),
+        }
+    }
+
+    fn arith<F>(&mut self, op: F) -> Result
+    where
+        F: FnOnce(Value, Value) -> std::result::Result<Value, Error>,
+    {
+        let rhs = self.pop()?;
+        let lhs = self.pop()?;
+        self.valst.push(op(lhs, rhs)?);
+        Ok(())
     }
 }
 
