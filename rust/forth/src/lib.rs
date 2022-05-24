@@ -54,7 +54,6 @@ impl Forth {
                 self.eval_execterm(&ts)?;
             }
         }
-
         Ok(())
     }
 
@@ -115,7 +114,7 @@ impl Forth {
         if bytes.len() >= 1 && bytes[0] as char == ':' {
             // add word definition to self.env
             // the definition encloses its environment: self.env[0..env_end]
-            self.parse_def(ts, env_end)?;
+            self.eval_def(ts, env_end)?;
         } else if is_num(ts) {
             self.valst.push(ts.parse::<i32>().unwrap());
         } else if let Some(index) = self.env_get(ts, env_end) {
@@ -165,7 +164,7 @@ impl Forth {
         Ok(())
     }
 
-    fn parse_def(&mut self, term_string: &str, env_end: usize) -> std::result::Result<(), Error> {
+    fn eval_def(&mut self, term_string: &str, env_end: usize) -> std::result::Result<(), Error> {
         let tokens = term_string.split_ascii_whitespace().collect::<Vec<_>>();
         if tokens.len() < 3 {
             // ";" is not included
