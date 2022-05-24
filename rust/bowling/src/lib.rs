@@ -18,11 +18,10 @@ pub struct BowlingGame {
 }
 
 impl BowlingGame {
-    /// Data structure:
+    /// Data structure, for example
     /// rolls  [ 0, 1, 2, 3, ..., 16, 17, 18, 19, 20(bonus) ]
     ///          ^  ^     ^       ^       ^
     /// frames [ 0, 1,    2, ..., 8,      9,            ]
-    /// frames[index_in_rolls]
     pub fn new() -> Self {
         Self {
             frame_begins: [0; FRAME_CNT],
@@ -45,16 +44,12 @@ impl BowlingGame {
         self.rolls_top += 1;
         let offset = self.rolls_top - self.frame_begins[self.frame_top];
         if self.frame_top == FRAME_CNT - 1 {
-            if offset == 1 && self.pins == 0 {
+            if (offset == 1 || offset == 2) && self.pins == 0 {
                 self.pins = TOTAL_PINS;
-            } else if offset == 2 {
-                if self.pins != 0 {
-                    let first_roll = self.rolls[self.frame_begins[self.frame_top]];
-                    if first_roll != TOTAL_PINS {
-                        self.begin_new_frame();
-                    }
-                } else {
-                    self.pins = TOTAL_PINS;
+            } else if offset == 2 && self.pins != 0 {
+                let first_roll = self.rolls[self.frame_begins[self.frame_top]];
+                if first_roll != TOTAL_PINS {
+                    self.begin_new_frame();
                 }
             } else if offset == 3 {
                 self.begin_new_frame();
@@ -75,10 +70,9 @@ impl BowlingGame {
                 let j = self.frame_begins[i];
                 let a = self.rolls[j];
                 let b = self.rolls[j + 1];
+                sum += a + b;
                 if a == TOTAL_PINS || a + b == TOTAL_PINS {
-                    sum += a + b + self.rolls[j + 2];
-                } else {
-                    sum += a + b;
+                    sum += self.rolls[j + 2];
                 }
             }
             Some(sum)
