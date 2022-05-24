@@ -10,10 +10,10 @@ const TOTAL_PINS: u16 = 10;
 
 #[derive(Default)]
 pub struct BowlingGame {
-    frame_begins: [usize; FRAME_CNT],
-    frame_top: usize,
+    frame_beginings: [usize; FRAME_CNT],
+    curr_frame: usize,
     rolls: [u16; BUFFER_SLOTS],
-    rolls_top: usize,
+    curr_roll: usize,
     pins: u16,
 }
 
@@ -24,30 +24,27 @@ impl BowlingGame {
     /// frames [ 0, 1,    2, ..., 8,      9,            ]
     pub fn new() -> Self {
         Self {
-            frame_begins: [0; FRAME_CNT],
-            frame_top: 0,
-            rolls: [0; BUFFER_SLOTS],
-            rolls_top: 0,
             pins: TOTAL_PINS,
+            ..Default::default()
         }
     }
 
     pub fn roll(&mut self, pins: u16) -> Result<(), Error> {
-        if self.frame_top == FRAME_CNT {
+        if self.curr_frame == FRAME_CNT {
             return Err(Error::GameComplete);
         }
         if pins > self.pins {
             return Err(Error::NotEnoughPinsLeft);
         }
         self.pins -= pins;
-        self.rolls[self.rolls_top] = pins;
-        self.rolls_top += 1;
-        let offset = self.rolls_top - self.frame_begins[self.frame_top];
-        if self.frame_top == FRAME_CNT - 1 {
+        self.rolls[self.curr_roll] = pins;
+        self.curr_roll += 1;
+        let offset = self.curr_roll - self.frame_beginings[self.curr_frame];
+        if self.curr_frame == FRAME_CNT - 1 {
             if (offset == 1 || offset == 2) && self.pins == 0 {
                 self.pins = TOTAL_PINS;
             } else if offset == 2 && self.pins != 0 {
-                let first_roll = self.rolls[self.frame_begins[self.frame_top]];
+                let first_roll = self.rolls[self.frame_beginings[self.curr_frame]];
                 if first_roll != TOTAL_PINS {
                     self.begin_new_frame();
                 }
@@ -62,14 +59,13 @@ impl BowlingGame {
     }
 
     pub fn score(&self) -> Option<u16> {
-        if self.frame_top < FRAME_CNT {
+        if self.curr_frame < FRAME_CNT {
             None
         } else {
             let mut sum = 0;
             for i in 0..FRAME_CNT {
-                let j = self.frame_begins[i];
-                let a = self.rolls[j];
-                let b = self.rolls[j + 1];
+                let j = self.frame_beginings[i];
+                let (a, b) = (self.rolls[j], self.rolls[j + 1]);
                 sum += a + b;
                 if a == TOTAL_PINS || a + b == TOTAL_PINS {
                     sum += self.rolls[j + 2];
@@ -80,9 +76,9 @@ impl BowlingGame {
     }
 
     fn begin_new_frame(&mut self) {
-        self.frame_top += 1;
-        if self.frame_top < FRAME_CNT {
-            self.frame_begins[self.frame_top] = self.rolls_top;
+        self.curr_frame += 1;
+        if self.curr_frame < FRAME_CNT {
+            self.frame_beginings[self.curr_frame] = self.curr_roll;
         }
         self.pins = TOTAL_PINS;
     }
