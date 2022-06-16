@@ -29,10 +29,6 @@ impl School {
     // the internal structure can be completely arbitrary. The tradeoff is that some data
     // must be copied each time `grade` is called.
     pub fn grade(&self, grade: u32) -> Vec<String> {
-        if self.grades.contains_key(&grade) {
-            self.grades[&grade].clone()
-        } else {
-            Vec::new()
-        }
+        self.grades.get(&grade).unwrap_or(&Vec::new()).clone()
     }
 }
