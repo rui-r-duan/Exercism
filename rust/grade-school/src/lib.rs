@@ -1,8 +1,9 @@
 use std::collections::BTreeMap;
+use std::collections::BinaryHeap;
 
 #[derive(Default)]
 pub struct School {
-    grades: BTreeMap<u32, Vec<String>>,
+    grades: BTreeMap<u32, BinaryHeap<String>>,
 }
 
 impl School {
@@ -11,13 +12,16 @@ impl School {
     }
 
     pub fn add(&mut self, grade: u32, student: &str) {
+        // self.grades
+        //     .entry(grade)
+        //     .and_modify(|e| {
+        //         e.push(student.to_owned());
+        //     })
+        //     .or_insert_with(|| BinaryHeap::from([student.to_owned()]));
         self.grades
             .entry(grade)
-            .and_modify(|e| {
-                e.push(student.to_owned());
-                e.sort_unstable();
-            })
-            .or_insert_with(|| vec![student.to_owned()]);
+            .or_default() // .or_insert_with(BinaryHeap::new)
+            .push(student.to_string())
     }
 
     pub fn grades(&self) -> Vec<u32> {
@@ -29,6 +33,10 @@ impl School {
     // the internal structure can be completely arbitrary. The tradeoff is that some data
     // must be copied each time `grade` is called.
     pub fn grade(&self, grade: u32) -> Vec<String> {
-        self.grades.get(&grade).unwrap_or(&Vec::new()).clone()
+        self.grades
+            .get(&grade)
+            .cloned()
+            .unwrap_or_default()
+            .into_sorted_vec()
     }
 }
