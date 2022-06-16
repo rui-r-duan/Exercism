@@ -1,8 +1,8 @@
-use std::collections::HashMap;
+use std::collections::BTreeMap;
 
 #[derive(Default)]
 pub struct School {
-    grades: HashMap<u32, Vec<String>>,
+    grades: BTreeMap<u32, Vec<String>>,
 }
 
 impl School {
@@ -15,15 +15,13 @@ impl School {
             .entry(grade)
             .and_modify(|e| {
                 e.push(student.to_owned());
-                e.sort();
+                e.sort_unstable();
             })
             .or_insert_with(|| vec![student.to_owned()]);
     }
 
     pub fn grades(&self) -> Vec<u32> {
-        let mut a: Vec<u32> = self.grades.keys().cloned().collect();
-        a.as_mut_slice().sort_unstable();
-        a
+        self.grades.keys().cloned().collect()
     }
 
     // If `grade` returned a reference, `School` would be forced to keep a `Vec<String>`
