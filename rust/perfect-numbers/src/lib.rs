@@ -38,3 +38,17 @@ fn factors_without_self(num: u64) -> Vec<u64> {
 
     result
 }
+
+use std::cmp::Ordering;
+pub fn classify2(num: u64) -> Option<Classification> {
+    if num == 0 {
+        None
+    } else {
+        let n: u64 = (num as f64).sqrt() as u64;
+        match (1..n).filter(|&f| num % f == 0).sum::<u64>().cmp(&num) {
+            Ordering::Less => Some(Classification::Deficient),
+            Ordering::Equal => Some(Classification::Perfect),
+            Ordering::Greater => Some(Classification::Abundant),
+        }
+    }
+}
