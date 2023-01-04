@@ -5,7 +5,7 @@
 //     for c in sentence.chars() {
 //         if c.is_ascii() {
 //             let c = c.to_ascii_lowercase();
-//             let u = c as i8 - 'a' as i8;
+//             let u = c as i16 - 'a' as i16;
 //             if u >= 0 && u < 26 {
 //                 flag |= 1 << u;
 //             }
