@@ -1,68 +1,69 @@
 #[derive(Debug, PartialEq, Eq)]
-pub struct Dna {
-    strand: Vec<u8>,
-}
+pub struct Dna(Vec<u8>);
 
 #[derive(Debug, PartialEq, Eq)]
-pub struct Rna {
-    strand: Vec<u8>,
+pub struct Rna(Vec<u8>);
+
+const fn dna_to_rna_nucleotide_map() -> [u8; 127] {
+    let mut map: [u8; 127] = [0; 127];
+    map[b'G' as usize] = b'C';
+    map[b'C' as usize] = b'G';
+    map[b'T' as usize] = b'A';
+    map[b'A' as usize] = b'U';
+
+    map
+}
+
+const fn rna_nucleotide_map() -> [bool; 127] {
+    let mut map: [bool; 127] = [false; 127];
+    map[b'C' as usize] = true;
+    map[b'G' as usize] = true;
+    map[b'A' as usize] = true;
+    map[b'U' as usize] = true;
+
+    map
 }
 
 impl Dna {
     pub fn new(dna: &str) -> Result<Dna, usize> {
-	let mut map: [u8; 127] = [0; 127];
-	map[b'G' as usize] = b'C';
-	map[b'C' as usize] = b'G';
-	map[b'T' as usize] = b'A';
-	map[b'A' as usize] = b'U';
+	const MAP: [u8; 127] = dna_to_rna_nucleotide_map();
+        for (i, c) in dna.bytes().enumerate() {
+            if MAP[c as usize] == 0 {
+                return Err(i);
+            }
+        }
+        let mut d = Dna(Vec::with_capacity(dna.len()));
+        for c in dna.bytes() {
+            d.0.push(c);
+        }
 
-	for (i, c) in dna.bytes().enumerate() {
-	    if map[c as usize] == 0 {
-		return Err(i);
-	    }
-	}
-	let mut d = Dna {strand: Vec::with_capacity(dna.len())};
-	for c in dna.bytes() {
-	    d.strand.push(c);
-	}
-
-	Ok(d)
+        Ok(d)
     }
 
     pub fn into_rna(self) -> Rna {
-	let mut map: [u8; 127] = [0; 127];
-	map[b'G' as usize] = b'C';
-	map[b'C' as usize] = b'G';
-	map[b'T' as usize] = b'A';
-	map[b'A' as usize] = b'U';
-	let mut r = Rna {strand: Vec::with_capacity(self.strand.len())};
-	for &c in self.strand.iter() {
-	    r.strand.push(map[c as usize]);
-	}
+	const MAP: [u8; 127] = dna_to_rna_nucleotide_map();
+        let mut r = Rna(Vec::with_capacity(self.0.len()));
+        for &c in self.0.iter() {
+            r.0.push(MAP[c as usize]);
+        }
 
-	r
+        r
     }
 }
 
 impl Rna {
     pub fn new(rna: &str) -> Result<Rna, usize> {
-	let mut map: [bool; 127] = [false; 127];
-	map[b'C' as usize] = true;
-	map[b'G' as usize] = true;
-	map[b'A' as usize] = true;
-	map[b'U' as usize] = true;
+	const MAP: [bool; 127] = rna_nucleotide_map();
+        for (i, c) in rna.bytes().enumerate() {
+            if !MAP[c as usize] {
+                return Err(i);
+            }
+        }
+        let mut r = Rna(Vec::with_capacity(rna.len()));
+        for c in rna.bytes() {
+            r.0.push(c);
+        }
 
-	for (i, c) in rna.bytes().enumerate() {
-	    if !map[c as usize] {
-		return Err(i);
-	    }
-	}
-	let mut r = Rna {strand: Vec::with_capacity(rna.len())};
-	for c in rna.bytes() {
-	    r.strand.push(c);
-	}
-
-	Ok(r)
-
+        Ok(r)
     }
 }
