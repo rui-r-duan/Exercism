@@ -1,3 +1,5 @@
+use std::ptr;
+
 #[derive(Debug, PartialEq, Eq)]
 pub struct Dna(Vec<u8>);
 
@@ -27,14 +29,20 @@ const fn rna_nucleotide_map() -> [bool; 127] {
 impl Dna {
     pub fn new(dna: &str) -> Result<Dna, usize> {
         const MAP: [u8; 127] = dna_to_rna_nucleotide_map();
-        for (i, c) in dna.bytes().enumerate() {
-            if MAP[c as usize] == 0 {
-                return Err(i);
-            }
+        match dna.bytes().position(|x| MAP[x as usize] == 0) {
+            Some(i) => return Err(i),
+            None => {}
         }
+
         let mut d = Dna(Vec::with_capacity(dna.len()));
-        for c in dna.bytes() {
-            d.0.push(c);
+        let dst_ptr = d.0.as_mut_ptr();
+        let src_ptr = dna.as_ptr();
+        unsafe {
+            ptr::copy_nonoverlapping(src_ptr, dst_ptr, dna.len());
+
+            // Notify the destination vector that it now holds the content
+            // os the source.
+            d.0.set_len(dna.len());
         }
 
         Ok(d)
@@ -60,9 +68,10 @@ impl Rna {
             }
         }
         let mut r = Rna(Vec::with_capacity(rna.len()));
-        for c in rna.bytes() {
-            r.0.push(c);
-        }
+        rna.as_bytes().clone_into(&mut r.0);
+        // for c in rna.bytes() {
+        //     r.0.push(c);
+        // }
 
         Ok(r)
     }
