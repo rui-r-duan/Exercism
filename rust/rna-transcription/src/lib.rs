@@ -26,7 +26,7 @@ const fn rna_nucleotide_map() -> [bool; 127] {
 
 impl Dna {
     pub fn new(dna: &str) -> Result<Dna, usize> {
-	const MAP: [u8; 127] = dna_to_rna_nucleotide_map();
+        const MAP: [u8; 127] = dna_to_rna_nucleotide_map();
         for (i, c) in dna.bytes().enumerate() {
             if MAP[c as usize] == 0 {
                 return Err(i);
@@ -41,7 +41,7 @@ impl Dna {
     }
 
     pub fn into_rna(self) -> Rna {
-	const MAP: [u8; 127] = dna_to_rna_nucleotide_map();
+        const MAP: [u8; 127] = dna_to_rna_nucleotide_map();
         let mut r = Rna(Vec::with_capacity(self.0.len()));
         for &c in self.0.iter() {
             r.0.push(MAP[c as usize]);
@@ -53,7 +53,7 @@ impl Dna {
 
 impl Rna {
     pub fn new(rna: &str) -> Result<Rna, usize> {
-	const MAP: [bool; 127] = rna_nucleotide_map();
+        const MAP: [bool; 127] = rna_nucleotide_map();
         for (i, c) in rna.bytes().enumerate() {
             if !MAP[c as usize] {
                 return Err(i);
