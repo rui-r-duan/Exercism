@@ -1,26 +1,62 @@
-pub fn encode(source: &str) -> String {
-    let v = source
-        .chars()
-        .fold(Vec::<(char, i32)>::new(), |mut accm, x| {
-            let n = accm.len();
-            if n > 0 && accm[n - 1].0 == x {
-                accm[n - 1].1 += 1;
-            } else {
-                accm.push((x, 1));
-            }
-            accm
-        })
-        .iter()
-        .map(|&(c, i)| {
-            if i == 1 {
-                format!("{}", c)
-            } else {
-                format!("{}{}", i, c)
-            }
-        })
-        .collect::<Vec<String>>();
+use std::str;
 
-    v.join("")
+// Assume only ASCII non-digit characters are in the source string.
+pub fn encode(source: &str) -> String {
+    let n = source.len();
+    if n == 0 || n == 1 {
+        return String::from(source);
+    }
+
+    let mut ans: Vec<u8> = Vec::with_capacity(n);
+    let src = source.as_bytes();
+    let mut i = 1;
+    let mut count = 1;
+    while i < n {
+        if src[i] == src[i - 1] {
+            count += 1;
+        } else {
+            if count == 1 {
+                ans.push(src[i - 1]);
+            } else {
+                vec_write_num(&mut ans, count);
+                ans.push(src[i - 1]);
+                count = 1;
+            }
+        }
+        i += 1;
+    }
+
+    // Now i == n, process the last char src[i - 1].
+    if count == 1 {
+        ans.push(src[i - 1]);
+    } else {
+        vec_write_num(&mut ans, count);
+        ans.push(src[i - 1]);
+    }
+
+    let s = ans.as_slice();
+    unsafe { str::from_utf8_unchecked(s).to_string() }
+}
+
+fn vec_write_num(v: &mut Vec<u8>, n: usize) {
+    let mut n = n;
+    let old_len = v.len();
+    let mut q = n / 10;
+    let mut r = (n % 10) as u8;
+    while q != 0 {
+        v.push(b'0' + r);
+        n = q;
+        q = n / 10;
+        r = (n % 10) as u8;
+    }
+    v.push(b'0' + r);
+    let new_len = v.len();
+    let digit_count = new_len - old_len;
+    for i in 0..digit_count / 2 {
+        let tmp = v[old_len + i];
+        v[old_len + i] = v[new_len - i - 1];
+        v[new_len - i - 1] = tmp;
+    }
 }
 
 pub fn decode(source: &str) -> String {
