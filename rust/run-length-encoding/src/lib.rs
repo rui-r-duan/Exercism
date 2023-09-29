@@ -1,5 +1,3 @@
-use std::str;
-
 // Assume source only contains ASCII non-digit characters.
 pub fn encode(source: &str) -> String {
     let n = source.len();
@@ -9,8 +7,8 @@ pub fn encode(source: &str) -> String {
 
     let mut ans: Vec<u8> = Vec::with_capacity(n);
     let src = source.as_bytes();
-    let mut i = 1;
-    let mut count = 1;
+    let mut i = 1; // peek position
+    let mut count = 1; // how many unencoded chars before peek position
     while i < n {
         if src[i] == src[i - 1] {
             count += 1;
@@ -34,17 +32,16 @@ pub fn encode(source: &str) -> String {
         ans.push(src[i - 1]);
     }
 
-    let s = ans.as_slice();
-    unsafe { str::from_utf8_unchecked(s).to_string() }
+    unsafe { String::from_utf8_unchecked(ans) }
 }
 
 fn vec_write_num(v: &mut Vec<u8>, n: usize) {
     let mut n = n;
     let old_len = v.len();
     while n != 0 {
-	let r = (n % 10) as u8;
+        let r = (n % 10) as u8;
         v.push(b'0' + r);
-	n = n / 10;
+        n = n / 10;
     }
     let new_len = v.len();
     let digit_count = new_len - old_len;
@@ -90,7 +87,7 @@ pub fn decode(source: &str) -> String {
 fn parse_positive_int(digits: &[u8]) -> i32 {
     let mut ans = 0;
     for i in 0..digits.len() {
-	ans = ans * 10 + (digits[i] - b'0') as i32;
+        ans = ans * 10 + (digits[i] - b'0') as i32;
     }
 
     ans
