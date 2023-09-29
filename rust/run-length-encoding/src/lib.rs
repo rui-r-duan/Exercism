@@ -1,6 +1,6 @@
 use std::str;
 
-// Assume only ASCII non-digit characters are in the source string.
+// Assume source only contains ASCII non-digit characters.
 pub fn encode(source: &str) -> String {
     let n = source.len();
     if n == 0 || n == 1 {
@@ -41,15 +41,11 @@ pub fn encode(source: &str) -> String {
 fn vec_write_num(v: &mut Vec<u8>, n: usize) {
     let mut n = n;
     let old_len = v.len();
-    let mut q = n / 10;
-    let mut r = (n % 10) as u8;
-    while q != 0 {
+    while n != 0 {
+	let r = (n % 10) as u8;
         v.push(b'0' + r);
-        n = q;
-        q = n / 10;
-        r = (n % 10) as u8;
+	n = n / 10;
     }
-    v.push(b'0' + r);
     let new_len = v.len();
     let digit_count = new_len - old_len;
     for i in 0..digit_count / 2 {
@@ -59,16 +55,17 @@ fn vec_write_num(v: &mut Vec<u8>, n: usize) {
     }
 }
 
+// Assume source only contains ASCII characters.
 pub fn decode(source: &str) -> String {
-    let chars = source.chars().collect::<Vec<char>>();
-    let mut v: Vec<(char, i32)> = Vec::new();
+    let chars = source.as_bytes();
+    let mut v: Vec<(u8, i32)> = Vec::new();
     let mut begin: usize = 0;
     for i in 0..chars.len() {
         if !chars[i].is_ascii_digit() {
             if i == 0 || begin == i {
                 v.push((chars[i], 1));
             } else {
-                let n: i32 = chars[begin..i].iter().collect::<String>().parse().unwrap();
+                let n: i32 = parse_positive_int(&chars[begin..i]);
                 v.push((chars[i], n));
             }
             begin = i + 1;
@@ -82,9 +79,18 @@ pub fn decode(source: &str) -> String {
     let mut j: usize = 0; // index of chars in ans string
     for &(c, i) in v.iter() {
         for _k in 0..i {
-            ans.insert(j, c);
+            ans.insert(j, c as char);
             j += 1;
         }
+    }
+
+    ans
+}
+
+fn parse_positive_int(digits: &[u8]) -> i32 {
+    let mut ans = 0;
+    for i in 0..digits.len() {
+	ans = ans * 10 + (digits[i] - b'0') as i32;
     }
 
     ans
