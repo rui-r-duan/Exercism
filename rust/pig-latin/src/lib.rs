@@ -102,3 +102,33 @@ fn transform_2(input: &str, prefix_range: std::ops::Range<usize>) -> String {
     s += "ay";
     s
 }
+pub fn translate2(input: &str) -> String {
+    input
+        .split_whitespace()
+        .map(|s| rotate(s, consonant(s)).chain("ay".chars()).collect())
+        .collect::<Vec<String>>()
+        .join(" ")
+}
+
+fn rotate(s: &str, n: usize) -> impl Iterator<Item = char> + '_ {
+    s.chars().cycle().skip(n).take(s.len())
+}
+fn consonant(s: &str) -> usize {
+    let vowel = |c| matches!(c as char, 'a' | 'e' | 'i' | 'o' | 'u');
+    match s.as_bytes() {
+        [c, ..] if vowel(*c) => 0,
+        [b'x', b'r', ..] | [b'y', b't', ..] => 0,
+        _ => match s
+            .as_bytes()
+            .iter()
+            .skip(1)
+            .position(|&c| vowel(c) || c == b'y')
+        {
+            Some(i) => match &s.as_bytes()[..i + 2] {
+                [.., b'q', b'u'] => i + 2,
+                _ => i + 1,
+            },
+            None => 0,
+        },
+    }
+}
