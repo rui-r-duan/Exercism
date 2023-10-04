@@ -1,33 +1,29 @@
+use std::iter;
+
 pub fn encode(source: &str) -> String {
     let mut ans = String::new();
-    let mut chars = source.chars().peekable();
-    let mut count = 0;
-    while let Some(curr) = chars.next() {
-        count += 1;
-        if chars.peek() != Some(&curr) {
-            if count > 1 {
-                ans.push_str(&count.to_string());
-            }
-            ans.push(curr);
-            count = 0;
+    let mut remainder = source;
+    while let Some(curr) = remainder.chars().next() {
+        let count = remainder.chars().take_while(|&c| c == curr).count();
+        match count {
+            1 => ans.push(curr),
+            _ => ans.push_str(&format!("{}{}", count, curr)),
         }
+        remainder = &remainder[count * curr.len_utf8()..];
     }
 
     ans
 }
 
 pub fn decode(source: &str) -> String {
-    let mut ans = String::new();
-    let mut digits = String::new();
-    for curr in source.chars() {
-        if curr.is_ascii_digit() {
-            digits.push(curr);
-        } else {
-            let n = digits.parse::<usize>().unwrap_or(1);
-            ans.push_str(&curr.to_string().repeat(n));
-            digits.clear();
-        }
-    }
-
-    ans
+    source
+        .chars()
+        .filter(|c: &char| !c.is_ascii_digit())
+        .zip(
+            source
+                .split(|c: char| !c.is_ascii_digit())
+                .map(|num| num.parse::<usize>().unwrap_or(1)),
+        )
+        .flat_map(|(c, count)| iter::repeat(c).take(count))
+        .collect()
 }
