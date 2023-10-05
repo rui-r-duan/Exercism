@@ -79,3 +79,17 @@ fn consistency() {
         rle::decode(rle::encode("zzz ZZ  zZ").as_str())
     );
 }
+
+#[test]
+fn test_filter() {
+    let a = "aaa bb ccc d";
+    let d: String = a.chars().filter(|c| !c.is_ascii_digit()).collect();
+    println!("{}", d);
+}
+
+#[test]
+fn test_split() {
+    let a = "aaa bb ccc d";
+    let b: Vec<&str> = a.split(|c: char| c.is_ascii_whitespace()).collect();
+    println!("{:?}", b);
+}
